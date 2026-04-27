@@ -20,6 +20,12 @@ class Store {
       const raw = localStorage.getItem(SESSION_KEY);
       if (raw) {
         this._state.currentUser = JSON.parse(raw);
+        // Link OneSignal on startup
+        if (window.OneSignalDeferred) {
+          window.OneSignalDeferred.push(async function(OneSignal) {
+            OneSignal.login(JSON.parse(raw)._id);
+          });
+        }
       }
     } catch (e) {}
 
@@ -95,6 +101,14 @@ class Store {
       if (user) {
         this._state.currentUser = { ...user };
         localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+        
+        // Link OneSignal on login
+        if (window.OneSignalDeferred) {
+          window.OneSignalDeferred.push(async function(OneSignal) {
+            OneSignal.login(user._id);
+          });
+        }
+        
         this._notifyAll();
         return true;
       }
@@ -118,6 +132,14 @@ class Store {
   logout() {
     this._state.currentUser = null;
     localStorage.removeItem(SESSION_KEY);
+    
+    // Unlink OneSignal on logout
+    if (window.OneSignalDeferred) {
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        OneSignal.logout();
+      });
+    }
+
     window.location.reload();
   }
 
