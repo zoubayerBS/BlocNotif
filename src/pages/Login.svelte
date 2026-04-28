@@ -10,14 +10,14 @@
   let animating = false;
   let errorMessage = '';
 
-  function handleLogin(e) {
+  async function handleLogin(e) {
     e.preventDefault();
     if (!username || !password) {
       errorMessage = 'Veuillez remplir tous les champs.';
       return;
     }
 
-    const success = store.loginWithUsername(username, password);
+    const success = await store.loginWithUsername(username, password);
     
     if (success) {
       errorMessage = '';
