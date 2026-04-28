@@ -51,7 +51,7 @@
     }
   }
 
-  function sendAstreinteAlert(type, personName = null) {
+  function sendAstreinteAlert(type, personName = null, targetId = null) {
     const label = type === 'Technicien' ? "Technicien d'Anesthésie" : type;
     const message = personName 
       ? `DEMANDE D'ASTREINTE : ${label} (${personName})`
@@ -61,7 +61,8 @@
       room: 'BLOC CENTRAL',
       type: 'Appel Astreinte',
       priority: 'haute',
-      message: message
+      message: message,
+      targetId: targetId
     });
     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     dispatch('toast', { message: `Appel astreinte ${label} envoyé`, type: 'success' });
@@ -270,7 +271,7 @@
         <div class="modal-body">
           <div class="iade-grid">
             {#each iades as iade}
-              <button class="iade-card" on:click={() => sendAstreinteAlert('Technicien', iade.name)}>
+              <button class="iade-card" on:click={() => sendAstreinteAlert('Technicien', iade.name, iade._id)}>
                 <div class="iade-avatar">{iade.name.charAt(0)}</div>
                 <div class="iade-info">
                   <span class="iade-name">{iade.name}</span>

@@ -17,10 +17,12 @@ export const create = mutation({
     message: v.string(),
     authorId: v.id("users"),
     authorName: v.string(),
+    targetId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
     const newNotifId = await ctx.db.insert("notifications", {
       ...args,
+      targetId: args.targetId || null,
       timestamp: Date.now(),
       takenBy: null,
       takenByName: null,
@@ -32,6 +34,7 @@ export const create = mutation({
     await ctx.scheduler.runAfter(0, internal.onesignal.sendPush, {
       title: `${args.type} - Salle ${args.room}`,
       message: args.message || `Alerte ${args.priority} en salle ${args.room}`,
+      targetId: args.targetId,
     });
 
     return newNotifId;

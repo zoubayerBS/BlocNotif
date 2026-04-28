@@ -5,6 +5,7 @@ export const sendPush = internalAction({
   args: {
     title: v.string(),
     message: v.string(),
+    targetId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
@@ -15,28 +16,35 @@ export const sendPush = internalAction({
       return;
     }
 
-    console.log(`Attempting to send push: "${args.title}" - AppID: ${ONESIGNAL_APP_ID}`);
+    console.log(`Attempting to send push: "${args.title}" - Target: ${args.targetId || "All"}`);
 
     try {
+      const payload = {
+        app_id: ONESIGNAL_APP_ID,
+        contents: { 
+          en: args.message,
+          fr: args.message 
+        },
+        headings: { 
+          en: args.title,
+          fr: args.title 
+        },
+        priority: 10
+      };
+
+      if (args.targetId) {
+        payload.include_external_user_ids = [args.targetId];
+      } else {
+        payload.included_segments = ["All"];
+      }
+
       const response = await fetch("https://onesignal.com/api/v1/notifications", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Basic ${ONESIGNAL_API_KEY}`
         },
-        body: JSON.stringify({
-          app_id: ONESIGNAL_APP_ID,
-          included_segments: ["All"],
-          contents: { 
-            en: args.message,
-            fr: args.message 
-          },
-          headings: { 
-            en: args.title,
-            fr: args.title 
-          },
-          priority: 10
-        })
+        body: JSON.stringify(payload)
       });
 
       const result = await response.json();

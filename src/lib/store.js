@@ -23,7 +23,12 @@ class Store {
         // Link OneSignal on startup
         if (window.OneSignalDeferred) {
           window.OneSignalDeferred.push(async function(OneSignal) {
-            OneSignal.login(JSON.parse(raw)._id);
+            const user = JSON.parse(raw);
+            OneSignal.login(user._id);
+            OneSignal.User.addTags({
+              role: user.role,
+              name: user.name
+            });
           });
         }
       }
@@ -106,6 +111,10 @@ class Store {
         if (window.OneSignalDeferred) {
           window.OneSignalDeferred.push(async function(OneSignal) {
             OneSignal.login(user._id);
+            OneSignal.User.addTags({
+              role: user.role,
+              name: user.name
+            });
           });
         }
         
