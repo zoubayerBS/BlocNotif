@@ -30,10 +30,19 @@ export const create = mutation({
       resolved: false,
     });
 
+    // Custom push notification content for urgent alerts
+    let pushTitle = `${args.type} - Salle ${args.room}`;
+    let pushMessage = args.message || `Alerte ${args.priority} en salle ${args.room}`;
+
+    if (args.type === 'Appel Astreinte') {
+      pushTitle = `🚨 RAPPEL ASTREINTE - BLOC`;
+      pushMessage = `⚠️ Vous êtes appelé à l'astreinte immédiatement au Bloc Central.`;
+    }
+
     // Send push notification via OneSignal
     await ctx.scheduler.runAfter(0, internal.onesignal.sendPush, {
-      title: `${args.type} - Salle ${args.room}`,
-      message: args.message || `Alerte ${args.priority} en salle ${args.room}`,
+      title: pushTitle,
+      message: pushMessage,
       targetId: args.targetId,
     });
 
