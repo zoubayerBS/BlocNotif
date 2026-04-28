@@ -11,9 +11,11 @@ export const sendPush = internalAction({
     const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY;
 
     if (!ONESIGNAL_API_KEY || !ONESIGNAL_APP_ID) {
-      console.warn("OneSignal credentials not set in Convex dashboard, skipping push notification");
+      console.error("CRITICAL: OneSignal credentials (ONESIGNAL_API_KEY or ONESIGNAL_APP_ID) are missing in the Convex environment variables.");
       return;
     }
+
+    console.log(`Attempting to send push: "${args.title}" - AppID: ${ONESIGNAL_APP_ID}`);
 
     try {
       const response = await fetch("https://onesignal.com/api/v1/notifications", {
@@ -38,9 +40,14 @@ export const sendPush = internalAction({
       });
 
       const result = await response.json();
-      console.log("OneSignal push result:", result);
+      
+      if (result.errors) {
+        console.error("OneSignal API Error:", result.errors);
+      } else {
+        console.log("OneSignal push sent successfully. Notification ID:", result.id);
+      }
     } catch (error) {
-      console.error("Failed to send OneSignal push:", error);
+      console.error("Network error while calling OneSignal:", error);
     }
   },
 });
