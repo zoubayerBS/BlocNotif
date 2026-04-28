@@ -21,7 +21,7 @@ export default defineSchema({
     authorId: v.id("users"),
     authorName: v.string(),
     timestamp: v.number(),
-    targetId: v.union(v.id("users"), v.null()),
+    targetId: v.optional(v.union(v.id("users"), v.null())),
     takenBy: v.union(v.id("users"), v.null()),
     takenByName: v.union(v.string(), v.null()),
     takenAt: v.union(v.number(), v.null()),

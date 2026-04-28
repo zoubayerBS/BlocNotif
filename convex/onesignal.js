@@ -29,7 +29,10 @@ export const sendPush = internalAction({
           en: args.title,
           fr: args.title 
         },
-        priority: 10
+        priority: 10,
+        ttl: 3600, // 1 heure (Urgente)
+        android_visibility: 1, // Public (affiche sur l'écran de verrouillage)
+        android_accent_color: "FF4F46E5", // Couleur de l'app
       };
 
       if (args.targetId) {
