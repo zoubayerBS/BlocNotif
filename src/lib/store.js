@@ -101,22 +101,26 @@ class Store {
       const registration = await navigator.serviceWorker.ready;
       let subscription = await registration.pushManager.getSubscription();
       
-      if (!subscription) {
-        // You'll need your VAPID public key here
-        const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-        if (!vapidPublicKey) {
-          throw new Error('VITE_VAPID_PUBLIC_KEY is not defined in environment variables');
-        }
-        
-        // Strip any accidental quotes
-        const cleanKey = vapidPublicKey.replace(/^["']|["']$/g, '');
-        const convertedVapidKey = this.urlBase64ToUint8Array(cleanKey);
-        
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: convertedVapidKey
-        });
+      // Safari/APNs throws VapidPkHashMismatch if the subscription was created with an old key.
+      // To be absolutely safe, we always unsubscribe first to force a fresh subscription with the current key.
+      if (subscription) {
+        await subscription.unsubscribe();
       }
+
+      // You'll need your VAPID public key here
+      const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) {
+        throw new Error('VITE_VAPID_PUBLIC_KEY is not defined in environment variables');
+      }
+      
+      // Strip any accidental quotes
+      const cleanKey = vapidPublicKey.replace(/^["']|["']$/g, '');
+      const convertedVapidKey = this.urlBase64ToUint8Array(cleanKey);
+      
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: convertedVapidKey
+      });
 
       // Save to Convex
       await httpClient.mutation(api.users.savePushSubscription, {
