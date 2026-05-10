@@ -20,16 +20,9 @@ class Store {
       const raw = localStorage.getItem(SESSION_KEY);
       if (raw) {
         this._state.currentUser = JSON.parse(raw);
-        // Link OneSignal on startup
-        if (window.OneSignalDeferred) {
-          window.OneSignalDeferred.push(async function(OneSignal) {
-            const user = JSON.parse(raw);
-            OneSignal.login(user._id);
-            OneSignal.User.addTags({
-              role: user.role,
-              name: user.name
-            });
-          });
+        // Try to resubscribe to push if already permission granted
+        if (Notification.permission === 'granted') {
+          this.subscribeToPush();
         }
       }
     } catch (e) {}
@@ -98,24 +91,108 @@ class Store {
     }
   }
 
+  // --- Push Notifications ---
+  
+  async subscribeToPush() {
+    if (!this._state.currentUser) return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      
+      if (!subscription) {
+        // You'll need your VAPID public key here
+        const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+        if (!vapidPublicKey) {
+          throw new Error('VITE_VAPID_PUBLIC_KEY is not defined in environment variables');
+        }
+        
+        // Strip any accidental quotes
+        const cleanKey = vapidPublicKey.replace(/^["']|["']$/g, '');
+        const convertedVapidKey = this.urlBase64ToUint8Array(cleanKey);
+        
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedVapidKey
+        });
+      }
+
+      // Save to Convex
+      await httpClient.mutation(api.users.savePushSubscription, {
+        userId: this._state.currentUser._id,
+        subscription: JSON.parse(JSON.stringify(subscription))
+      });
+    } catch (e) {
+      console.error('Failed to subscribe to push', e);
+      throw e;
+    }
+  }
+
+  async unsubscribeFromPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        const endpoint = subscription.endpoint;
+        // Optionally unsubscribe locally
+        // await subscription.unsubscribe();
+        
+        // Let's remove it from Convex (using the last known user ID if any, but since we cleared it...)
+        // Actually, better to pass the user ID before setting it to null
+        const userId = JSON.parse(localStorage.getItem(SESSION_KEY))?._id;
+        if (userId) {
+          await httpClient.mutation(api.users.removePushSubscription, {
+            userId: userId,
+            endpoint: endpoint
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to unsubscribe', e);
+    }
+  }
+
+  urlBase64ToUint8Array(base64String) {
+    if (!base64String) throw new Error("Base64 string is empty");
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/\-/g, '+')
+      .replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
   // --- Auth ---
 
   async loginWithUsername(username, password) {
+    // 1. Demander la permission immédiatement pour ne pas perdre le contexte du "clic" utilisateur (requis par Safari/iOS)
+    let permissionPromise = null;
+    if ('Notification' in window && Notification.permission === 'default') {
+      permissionPromise = Notification.requestPermission();
+    }
+
     try {
+      // 2. Faire la requête de connexion
       const user = await httpClient.query(api.users.login, { username, password });
       if (user) {
         this._state.currentUser = { ...user };
         localStorage.setItem(SESSION_KEY, JSON.stringify(user));
         
-        // Link OneSignal on login
-        if (window.OneSignalDeferred) {
-          window.OneSignalDeferred.push(async function(OneSignal) {
-            OneSignal.login(user._id);
-            OneSignal.User.addTags({
-              role: user.role,
-              name: user.name
-            });
-          });
+        // 3. Traiter l'abonnement push
+        if (permissionPromise) {
+          const permission = await permissionPromise;
+          if (permission === 'granted') {
+            this.subscribeToPush();
+          }
+        } else if ('Notification' in window && Notification.permission === 'granted') {
+          this.subscribeToPush();
         }
         
         this._notifyAll();
@@ -142,12 +219,9 @@ class Store {
     this._state.currentUser = null;
     localStorage.removeItem(SESSION_KEY);
     
-    // Unlink OneSignal on logout
-    if (window.OneSignalDeferred) {
-      window.OneSignalDeferred.push(async function(OneSignal) {
-        OneSignal.logout();
-      });
-    }
+    
+    // Unsubscribe from push
+    this.unsubscribeFromPush();
 
     window.location.reload();
   }

@@ -55,4 +55,9 @@ export default defineSchema({
   rooms: defineTable({
     name: v.string(),
   }),
+
+  pushSubscriptions: defineTable({
+    userId: v.id("users"),
+    subscription: v.any(), // Store the raw PushSubscription object
+  }).index("by_userId", ["userId"]),
 });

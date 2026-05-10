@@ -14,7 +14,8 @@
   let teamMembers = [...store.state.teamMembers];
   let unsubscribe;
 
-  let activeSection = 'rooms'; // 'rooms' | 'users' | 'app'
+  let isSurveillant = currentUser?.role?.includes('surveillant');
+  let activeSection = isSurveillant ? 'rooms' : 'app'; // 'rooms' | 'users' | 'app'
   
   // Room Management State
   let newRoomName = '';
@@ -44,6 +45,7 @@
       rooms = [...state.rooms];
       teamMembers = [...state.teamMembers];
       currentUser = state.currentUser;
+      isSurveillant = currentUser?.role?.includes('surveillant');
     });
   });
 
@@ -113,39 +115,52 @@
     store.logout();
   }
 
-  function handleEnableNotifications() {
-    if (window.OneSignalDeferred) {
-      window.OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.Notifications.requestPermission();
-      });
-    } else {
-      dispatch('toast', { message: 'Chargement des notifications...', type: 'info' });
+  async function handleEnableNotifications() {
+    if (!('Notification' in window)) {
+      dispatch('toast', { message: 'Notifications non supportées (HTTPS requis)', type: 'error' });
+      return;
+    }
+    
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        dispatch('toast', { message: 'Abonnement en cours...', type: 'info' });
+        await store.subscribeToPush();
+        dispatch('toast', { message: 'Abonné avec succès !', type: 'success' });
+      } else {
+        dispatch('toast', { message: `Permission: ${permission}`, type: 'warning' });
+      }
+    } catch (e) {
+      console.error(e);
+      dispatch('toast', { message: e.message || 'Erreur inconnue', type: 'error' });
     }
   }
 </script>
 
 <div class="settings-page">
   <div class="settings-header">
-    <h1 class="page-title">Administration</h1>
-    <p class="page-subtitle">Gestion du bloc et de l'équipe</p>
+    <h1 class="page-title">{isSurveillant ? 'Administration' : 'Paramètres'}</h1>
+    <p class="page-subtitle">{isSurveillant ? "Gestion du bloc et de l'équipe" : "Gérer votre compte"}</p>
   </div>
 
   <!-- Section Switcher -->
   <div class="section-tabs">
-    <button 
-      class="section-tab" 
-      class:active={activeSection === 'rooms'} 
-      on:click={() => activeSection = 'rooms'}
-    >
-      <Home size={18} /> Salles
-    </button>
-    <button 
-      class="section-tab" 
-      class:active={activeSection === 'users'} 
-      on:click={() => activeSection = 'users'}
-    >
-      <Users size={18} /> Équipe
-    </button>
+    {#if isSurveillant}
+      <button 
+        class="section-tab" 
+        class:active={activeSection === 'rooms'} 
+        on:click={() => activeSection = 'rooms'}
+      >
+        <Home size={18} /> Salles
+      </button>
+      <button 
+        class="section-tab" 
+        class:active={activeSection === 'users'} 
+        on:click={() => activeSection = 'users'}
+      >
+        <Users size={18} /> Équipe
+      </button>
+    {/if}
     <button 
       class="section-tab" 
       class:active={activeSection === 'app'} 

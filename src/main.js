@@ -14,12 +14,4 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// OneSignal Initialization (V16)
-window.OneSignalDeferred = window.OneSignalDeferred || [];
-OneSignalDeferred.push(async function(OneSignal) {
-  await OneSignal.init({
-    appId: "63bad8ac-eb43-46fd-809b-061962bc04f2",
-  });
-});
-
 export default app

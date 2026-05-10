@@ -108,7 +108,7 @@
         <Notifications on:toast={showToast} />
       {:else if activeTab === "permutations"}
         <Permutations on:toast={showToast} />
-      {:else if activeTab === "settings" && currentUser?.role?.includes('surveillant')}
+      {:else if activeTab === "settings"}
         <Settings on:toast={showToast} />
       {/if}
     </main>

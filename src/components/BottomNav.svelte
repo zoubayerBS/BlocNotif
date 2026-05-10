@@ -37,7 +37,7 @@
   $: tabs = [
     { id: 'notifications', label: 'Alertes', icon: 'bell' },
     { id: 'permutations', label: 'Échanges', icon: 'swap' },
-    ...(currentUser?.role?.includes('surveillant') ? [{ id: 'settings', label: 'Paramètres', icon: 'settings' }] : [])
+    { id: 'settings', label: 'Paramètres', icon: 'settings' }
   ];
 </script>
 

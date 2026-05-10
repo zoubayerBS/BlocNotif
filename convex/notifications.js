@@ -39,12 +39,26 @@ export const create = mutation({
       pushMessage = `⚠️ Vous êtes appelé à l'astreinte immédiatement au Bloc Central.`;
     }
 
-    // Send push notification via OneSignal
-    await ctx.scheduler.runAfter(0, internal.onesignal.sendPush, {
-      title: pushTitle,
-      message: pushMessage,
-      targetId: args.targetId,
-    });
+    // Send push notification via Web Push
+    let subscriptions = [];
+    if (args.targetId) {
+      const userSubs = await ctx.db
+        .query("pushSubscriptions")
+        .withIndex("by_userId", (q) => q.eq("userId", args.targetId))
+        .collect();
+      subscriptions = userSubs.map(s => s.subscription);
+    } else {
+      const allSubs = await ctx.db.query("pushSubscriptions").collect();
+      subscriptions = allSubs.map(s => s.subscription);
+    }
+
+    if (subscriptions.length > 0) {
+      await ctx.scheduler.runAfter(0, internal.webpush.sendPush, {
+        title: pushTitle,
+        message: pushMessage,
+        subscriptions,
+      });
+    }
 
     return newNotifId;
   },

@@ -104,3 +104,61 @@ export const create = mutation({
     return userId;
   },
 });
+
+export const savePushSubscription = mutation({
+  args: {
+    userId: v.id("users"),
+    subscription: v.any(),
+  },
+  handler: async (ctx, args) => {
+    // Check if subscription already exists for this user and endpoint
+    const existing = await ctx.db
+      .query("pushSubscriptions")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+    
+    const isDuplicate = existing.some(
+      (sub) => sub.subscription.endpoint === args.subscription.endpoint
+    );
+
+    if (!isDuplicate) {
+      await ctx.db.insert("pushSubscriptions", {
+        userId: args.userId,
+        subscription: args.subscription,
+      });
+    }
+  },
+});
+
+export const removePushSubscription = mutation({
+  args: {
+    userId: v.id("users"),
+    endpoint: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("pushSubscriptions")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+    
+    for (const sub of existing) {
+      if (sub.subscription.endpoint === args.endpoint) {
+        await ctx.db.delete(sub._id);
+      }
+    }
+  },
+});
+
+export const removeSubscriptionByEndpoint = mutation({
+  args: {
+    endpoint: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const allSubs = await ctx.db.query("pushSubscriptions").collect();
+    for (const sub of allSubs) {
+      if (sub.subscription.endpoint === args.endpoint) {
+        await ctx.db.delete(sub._id);
+      }
+    }
+  },
+});
