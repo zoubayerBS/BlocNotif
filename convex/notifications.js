@@ -36,7 +36,7 @@ export const create = mutation({
 
     if (args.type === 'Appel Astreinte') {
       pushTitle = `🚨 RAPPEL ASTREINTE - BLOC`;
-      pushMessage = `⚠️ Vous êtes appelé à l'astreinte immédiatement au Bloc Central.`;
+      pushMessage = args.message ? `⚠️ Astreinte : ${args.message}` : `⚠️ Vous êtes appelé à l'astreinte immédiatement au Bloc Central.`;
     }
 
     // Send push notification via Web Push
@@ -47,6 +47,30 @@ export const create = mutation({
         .withIndex("by_userId", (q) => q.eq("userId", args.targetId))
         .collect();
       subscriptions = userSubs.map(s => s.subscription);
+    } else if (args.type === 'Appel Astreinte') {
+      // General astreinte call. Target users with the specific role:
+      let targetRole = null;
+      if (args.message.includes("Technicien") || args.message.includes("IADE")) {
+        targetRole = "technicien";
+      } else if (args.message.includes("MAR")) {
+        targetRole = "medecin anesthesiste";
+      }
+
+      if (targetRole) {
+        const users = await ctx.db.query("users").collect();
+        const targetUserIds = users.filter(u => u.role === targetRole).map(u => u._id);
+        
+        for (const uid of targetUserIds) {
+          const userSubs = await ctx.db
+            .query("pushSubscriptions")
+            .withIndex("by_userId", (q) => q.eq("userId", uid))
+            .collect();
+          subscriptions.push(...userSubs.map(s => s.subscription));
+        }
+      } else {
+        const allSubs = await ctx.db.query("pushSubscriptions").collect();
+        subscriptions = allSubs.map(s => s.subscription);
+      }
     } else {
       const allSubs = await ctx.db.query("pushSubscriptions").collect();
       subscriptions = allSubs.map(s => s.subscription);

@@ -309,7 +309,7 @@ class Store {
 
   // --- Notifications ---
 
-  async addNotification({ room, type, priority, message }) {
+  async addNotification({ room, type, priority, message, targetId }) {
     if (!this._state.currentUser) return;
     try {
       await httpClient.mutation(api.notifications.create, {
@@ -319,6 +319,7 @@ class Store {
         message,
         authorId: this._state.currentUser._id,
         authorName: this._state.currentUser.name,
+        targetId: targetId || undefined,
       });
     } catch (e) { console.error(e); }
   }

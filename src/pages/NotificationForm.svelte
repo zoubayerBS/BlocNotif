@@ -12,13 +12,17 @@
   let priority = "";
   let patient = "";
   let message = "";
+  let selectedRecipient = null;
+  let recipientDropdownOpen = false;
 
   let rooms = [...store.state.rooms];
+  let teamMembers = [...store.state.teamMembers];
   let unsubscribe;
 
   onMount(() => {
     unsubscribe = store.subscribe("notif-form", (state) => {
       rooms = [...state.rooms];
+      teamMembers = [...state.teamMembers];
     });
   });
 
@@ -36,10 +40,12 @@
     "Appel Astreinte",
   ];
 
+  $: isFormInvalid = !room || !type || !priority || (type === "Appel Astreinte" && !selectedRecipient);
+
   function handleSubmit(e) {
     e.preventDefault();
-    if (!room || !type || !priority) return;
-    dispatch("submit", { room, type, priority, patient, message });
+    if (isFormInvalid) return;
+    dispatch("submit", { room, type, priority, patient, message, targetId: selectedRecipient?._id });
   }
 
   function handleBackdrop(e) {
@@ -52,10 +58,16 @@
     if (typeDropdownOpen && !e.target.closest("#type-dropdown-container")) {
       typeDropdownOpen = false;
     }
+    if (recipientDropdownOpen && !e.target.closest("#recipient-dropdown-container")) {
+      recipientDropdownOpen = false;
+    }
   }
 
   $: if (type !== "Protocole anesthésique") {
     patient = "";
+  }
+  $: if (type !== "Appel Astreinte") {
+    selectedRecipient = null;
   }
 </script>
 
@@ -263,6 +275,75 @@
         </div>
       {/if}
 
+      <!-- Recipient for Appel Astreinte -->
+      {#if type === "Appel Astreinte"}
+        <div
+          class="form-group relative"
+          id="recipient-dropdown-container"
+          style="animation: slideDown var(--transition-base) ease-out;"
+        >
+          <div class="form-label" id="recipient-label">Appelé (Destinataire)</div>
+          <button
+            type="button"
+            class="custom-select-trigger"
+            class:open={recipientDropdownOpen}
+            on:click={() => (recipientDropdownOpen = !recipientDropdownOpen)}
+            aria-labelledby="recipient-label"
+          >
+            {selectedRecipient ? selectedRecipient.name : "Choisir un membre..."}
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="chevron"
+              class:rotate={recipientDropdownOpen}
+            >
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+
+          {#if recipientDropdownOpen}
+            <div class="custom-select-dropdown">
+              {#each teamMembers as member}
+                <button
+                  type="button"
+                  class="custom-select-option"
+                  class:selected={selectedRecipient?._id === member._id}
+                  on:click={() => {
+                    selectedRecipient = member;
+                    recipientDropdownOpen = false;
+                  }}
+                >
+                  <div style="display: flex; flex-direction: column;">
+                    <span style="font-weight: 600; text-align: left;">{member.name}</span>
+                    <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; text-align: left;">{member.role}</span>
+                  </div>
+                  {#if selectedRecipient?._id === member._id}
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  {/if}
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/if}
+
       <!-- Message -->
       <div class="form-group">
         <label class="form-label" for="notif-message">Message (optionnel)</label
@@ -278,7 +359,7 @@
       <button
         type="submit"
         class="submit-btn"
-        disabled={!room || !type || !priority}
+        disabled={isFormInvalid}
       >
         <svg
           width="18"

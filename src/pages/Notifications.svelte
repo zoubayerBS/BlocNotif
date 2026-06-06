@@ -10,6 +10,7 @@
   let teamMembers = [...store.state.teamMembers];
   let showForm = false;
   let showIadeSelect = false;
+  let showMarSelect = false;
   let filter = 'all'; // all | haute | moyenne | basse
   let unsubscribe;
 
@@ -46,6 +47,8 @@
   function handleQuickAstreinte(type) {
     if (type === 'Technicien') {
       showIadeSelect = true;
+    } else if (type === 'MAR') {
+      showMarSelect = true;
     } else {
       sendAstreinteAlert(type);
     }
@@ -67,9 +70,11 @@
     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     dispatch('toast', { message: `Appel astreinte ${label} envoyé`, type: 'success' });
     showIadeSelect = false;
+    showMarSelect = false;
   }
 
   $: iades = teamMembers.filter(m => m.role === 'technicien');
+  $: mars = teamMembers.filter(m => m.role === 'medecin anesthesiste');
 
   function getTypeIcon(type) {
     const icons = {
@@ -110,11 +115,28 @@
     }).replace(',', ' à');
   }
 
-  $: filteredNotifications = filter === 'all'
-      ? notifications.filter(n => !n.resolved)
-      : notifications.filter(n => !n.resolved && n.priority === filter);
-
   $: currentUser = store.state.currentUser;
+
+  $: filteredNotifications = (filter === 'all'
+      ? notifications.filter(n => !n.resolved)
+      : notifications.filter(n => !n.resolved && n.priority === filter)
+  ).filter(n => {
+    if (n.type === 'Appel Astreinte') {
+      if (n.targetId) {
+        return n.targetId === currentUser?._id || n.authorId === currentUser?._id;
+      }
+      // General call without a specific targetId
+      const role = currentUser?.role || '';
+      if (n.message.includes("Technicien") || n.message.includes("IADE")) {
+        return role.includes("technicien") || n.authorId === currentUser?._id;
+      }
+      if (n.message.includes("MAR")) {
+        return role.includes("medecin anesthesiste") || n.authorId === currentUser?._id;
+      }
+      return true;
+    }
+    return true;
+  });
 </script>
 
 <div class="page notifications-page">
@@ -291,6 +313,43 @@
           
           <button class="btn-generic" on:click={() => sendAstreinteAlert('Technicien')}>
             Appel général Technicien (sans nom)
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if showMarSelect}
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div class="modal-backdrop" on:click|self={() => showMarSelect = false}>
+      <div class="iade-modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Choisir le MAR d'astreinte</h2>
+          <button class="modal-close" on:click={() => showMarSelect = false}>
+            <X size={20} />
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="iade-grid">
+            {#each mars as mar}
+              <button class="iade-card" on:click={() => sendAstreinteAlert('MAR', mar.name, mar._id)}>
+                <div class="iade-avatar">{mar.name.charAt(0)}</div>
+                <div class="iade-info">
+                  <span class="iade-name">{mar.name}</span>
+                  <span class="iade-role">Médecin Anesthésiste</span>
+                </div>
+                <Phone size={18} class="call-icon" />
+              </button>
+            {/each}
+            
+            {#if mars.length === 0}
+              <p class="empty-msg">Aucun MAR enregistré dans l'équipe.</p>
+            {/if}
+          </div>
+          
+          <button class="btn-generic" on:click={() => sendAstreinteAlert('MAR')}>
+            Appel général MAR (sans nom)
           </button>
         </div>
       </div>
