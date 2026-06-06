@@ -27,6 +27,15 @@ export default defineSchema({
     takenByName: v.union(v.string(), v.null()),
     takenAt: v.union(v.number(), v.null()),
     resolved: v.boolean(),
+    acknowledgedBy: v.optional(
+      v.array(
+        v.object({
+          userId: v.id("users"),
+          userName: v.string(),
+          timestamp: v.number(),
+        })
+      )
+    ),
   }),
 
   absences: defineTable({

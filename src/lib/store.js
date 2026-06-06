@@ -341,6 +341,17 @@ class Store {
     } catch (e) { console.error(e); }
   }
 
+  async acknowledgeNotification(notifId) {
+    if (!this._state.currentUser) return;
+    try {
+      await httpClient.mutation(api.notifications.acknowledge, {
+        notifId,
+        userId: this._state.currentUser._id,
+        userName: this._state.currentUser.name,
+      });
+    } catch (e) { console.error(e); }
+  }
+
   // --- Absences ---
 
   async setStatus(type, duration = null, reason = '') {

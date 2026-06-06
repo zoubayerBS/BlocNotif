@@ -28,6 +28,7 @@ export const create = mutation({
       takenByName: null,
       takenAt: null,
       resolved: false,
+      acknowledgedBy: [],
     });
 
     // Custom push notification content for urgent alerts
@@ -114,6 +115,36 @@ export const resolve = mutation({
   handler: async (ctx, args) => {
     await ctx.db.patch(args.notifId, {
       resolved: true,
+    });
+  },
+});
+
+export const acknowledge = mutation({
+  args: {
+    notifId: v.id("notifications"),
+    userId: v.id("users"),
+    userName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const notif = await ctx.db.get(args.notifId);
+    if (!notif) throw new Error("Notification introuvable");
+
+    const currentAck = notif.acknowledgedBy || [];
+    if (currentAck.some((a) => a.userId === args.userId)) {
+      return; // Already acknowledged
+    }
+
+    const updatedAck = [
+      ...currentAck,
+      {
+        userId: args.userId,
+        userName: args.userName,
+        timestamp: Date.now(),
+      },
+    ];
+
+    await ctx.db.patch(args.notifId, {
+      acknowledgedBy: updatedAck,
     });
   },
 });

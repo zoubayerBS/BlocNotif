@@ -2,7 +2,7 @@
   import { store } from '../lib/store.js';
   import NotificationForm from './NotificationForm.svelte';
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
-  import { Bell, ShieldAlert, Wrench, Package, AlertTriangle, Info, CheckCircle2, ListFilter, UserSquare2, Syringe, Coffee, Ban, Phone, X } from 'lucide-svelte';
+  import { Bell, ShieldAlert, Wrench, Package, AlertTriangle, Info, CheckCircle2, ListFilter, UserSquare2, Syringe, Coffee, Ban, Phone, X, Megaphone } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -34,6 +34,12 @@
   function handleResolve(notifId) {
     store.resolveNotification(notifId);
     dispatch('toast', { message: 'Notification résolue', type: 'success' });
+  }
+
+  function handleAcknowledge(notifId) {
+    store.acknowledgeNotification(notifId);
+    if (navigator.vibrate) navigator.vibrate(50);
+    dispatch('toast', { message: 'Annonce validée (OK)', type: 'success' });
   }
 
   function handleCreate(event) {
@@ -88,6 +94,7 @@
       'Pause': Coffee,
       'Absence': Ban,
       'Retour': CheckCircle2,
+      'Annonce': Megaphone,
     };
     return icons[type] || Info;
   }
@@ -228,6 +235,20 @@
             <p class="notif-message">{notif.message}</p>
           {/if}
 
+          {#if notif.type === 'Annonce' && (notif.authorId === currentUser?._id || currentUser?.role?.includes('surveillant')) && notif.acknowledgedBy?.length > 0}
+            <div class="notif-divider"></div>
+            <div class="acks-section">
+              <span class="acks-title">Lu par ({notif.acknowledgedBy.length}) :</span>
+              <div class="acks-list">
+                {#each notif.acknowledgedBy as ack}
+                  <span class="ack-badge" title={formatTime(ack.timestamp)}>
+                    {ack.userName}
+                  </span>
+                {/each}
+              </div>
+            </div>
+          {/if}
+
           <div class="notif-divider"></div>
 
           <div class="notif-footer">
@@ -238,7 +259,31 @@
               <span class="notif-time">{formatTime(notif.timestamp)}</span>
             </div>
 
-            {#if notif.takenBy}
+            {#if notif.type === 'Annonce'}
+              <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                {#if notif.acknowledgedBy?.some(a => a.userId === currentUser?._id)}
+                  <span class="ack-status-badge">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    OK / Lu
+                  </span>
+                {:else if notif.authorId !== currentUser?._id}
+                  <button class="ack-btn" on:click={() => handleAcknowledge(notif._id)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    J'ai compris (OK)
+                  </button>
+                {/if}
+
+                {#if notif.authorId === currentUser?._id}
+                  <button class="resolve-btn" on:click={() => handleResolve(notif._id)}>
+                    Clôturer
+                  </button>
+                {/if}
+              </div>
+            {:else if notif.takenBy}
               <div class="notif-taken">
                 <span class="taken-badge">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -891,5 +936,67 @@
     color: var(--text-muted);
     font-size: var(--fs-sm);
     padding: var(--space-lg) 0;
+  }
+
+  /* Acknowledgements (Annonce OK) */
+  .acks-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: var(--space-md);
+  }
+
+  .acks-title {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .acks-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .ack-badge {
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--color-primary-glow);
+    color: var(--color-primary-dark);
+    padding: 4px 8px;
+    border-radius: var(--radius-md);
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .ack-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--color-success), var(--color-success-dark));
+    color: white;
+    font-size: var(--fs-sm);
+    font-weight: 800;
+    transition: all var(--transition-fast);
+    box-shadow: 0 4px 12px var(--color-success-glow);
+  }
+
+  .ack-btn:active {
+    transform: scale(0.95);
+  }
+
+  .ack-status-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--fs-xs);
+    font-weight: 800;
+    color: var(--color-success);
+    padding: 6px 12px;
+    background: var(--color-success-glow);
+    border-radius: var(--radius-full);
   }
 </style>

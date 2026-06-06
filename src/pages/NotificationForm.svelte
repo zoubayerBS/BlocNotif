@@ -38,6 +38,7 @@
     "Salle non opérable",
     "Info",
     "Appel Astreinte",
+    "Annonce",
   ];
 
   $: isFormInvalid = !room || !type || !priority || (type === "Appel Astreinte" && !selectedRecipient);
