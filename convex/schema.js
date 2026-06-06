@@ -11,6 +11,7 @@ export default defineSchema({
     since: v.union(v.number(), v.null()),
     duration: v.union(v.number(), v.null()),
     reason: v.string(),
+    lastSeen: v.optional(v.number()),
   }).index("by_username", ["username"]),
 
   notifications: defineTable({

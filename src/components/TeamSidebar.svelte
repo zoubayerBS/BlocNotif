@@ -40,13 +40,15 @@
     return `${s}s`;
   }
 
-  function getStatusColor(status) {
+  function getStatusColor(status, lastSeen) {
+    if (Date.now() - (lastSeen || 0) > 35000) return 'var(--text-muted)';
     if (status === 'present') return 'var(--color-success)';
     if (status === 'pause') return 'var(--color-warning)';
     return 'var(--color-danger)';
   }
 
-  function getStatusLabel(status) {
+  function getStatusLabel(status, lastSeen) {
+    if (Date.now() - (lastSeen || 0) > 35000) return 'Hors ligne';
     if (status === 'present') return 'Présent';
     if (status === 'pause') return 'En pause';
     return 'Absent';
@@ -87,28 +89,28 @@
       <div class="sidebar-stats">
         <div class="stat-chip present">
           <span class="stat-dot"></span>
-          {members.filter(m => m.status === 'present').length} présents
+          {members.filter(m => m.status === 'present' && Date.now() - (m.lastSeen || 0) <= 35000).length} présents
         </div>
         <div class="stat-chip pause">
           <span class="stat-dot"></span>
-          {members.filter(m => m.status === 'pause').length} en pause
+          {members.filter(m => m.status === 'pause' && Date.now() - (m.lastSeen || 0) <= 35000).length} en pause
         </div>
         <div class="stat-chip absent">
           <span class="stat-dot"></span>
-          {members.filter(m => m.status === 'absent').length} absents
+          {members.filter(m => m.status === 'absent' || Date.now() - (m.lastSeen || 0) > 35000).length} absents/hors ligne
         </div>
       </div>
 
       <div class="member-list">
         {#each members as member}
-          <div class="member-card" class:is-away={member.status !== 'present'}>
+          <div class="member-card" class:is-away={member.status !== 'present' || Date.now() - (member.lastSeen || 0) > 35000}>
             <div class="member-avatar" style="background: {
               member.role === 'surveillant bloc' ? 'linear-gradient(135deg, var(--color-accent), #00b3ad)' : 
               member.role === 'medecin anesthesiste' ? 'linear-gradient(135deg, #a29bfe, #6c5ce7)' : 
               'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))'
             }">
               {getInitials(member.name)}
-              <span class="status-dot" style="background: {getStatusColor(member.status)}"></span>
+              <span class="status-dot" style="background: {getStatusColor(member.status, member.lastSeen)}"></span>
             </div>
             <div class="member-info">
               <span class="member-name">
@@ -119,9 +121,9 @@
                   <span class="role-badge badge-medecin">Médecin</span>
                 {/if}
               </span>
-              <span class="member-status" style="color: {getStatusColor(member.status)}">
-                {getStatusLabel(member.status)}
-                {#if member.since && member.status !== 'present'}
+              <span class="member-status" style="color: {getStatusColor(member.status, member.lastSeen)}">
+                {getStatusLabel(member.status, member.lastSeen)}
+                {#if member.since && member.status !== 'present' && Date.now() - (member.lastSeen || 0) <= 35000}
                   <span class="member-timer">• {formatDuration(member.since, now)}</span>
                 {/if}
               </span>
@@ -149,7 +151,7 @@
     right: 0;
     bottom: 0;
     width: min(320px, 85vw);
-    background: var(--bg-surface);
+    background: #ffffff;
     border-left: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;

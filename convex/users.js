@@ -16,6 +16,24 @@ export const updateRole = mutation({
   },
 });
 
+export const updatePassword = mutation({
+  args: { userId: v.id("users"), oldPassword: v.string(), newPassword: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("Utilisateur introuvable");
+    if (user.password !== args.oldPassword) throw new Error("Ancien mot de passe incorrect");
+    await ctx.db.patch(args.userId, { password: args.newPassword });
+    return true;
+  },
+});
+
+export const updatePresence = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, { lastSeen: Date.now() });
+  },
+});
+
 export const seedTeam = mutation({
   args: {},
   handler: async (ctx) => {
@@ -23,14 +41,14 @@ export const seedTeam = mutation({
     if (existingUsers.length > 0) return "Already seeded";
 
     const DEFAULT_TEAM = [
-      { username: 'karim', password: 'password', name: 'Karim Benali', role: 'surveillant bloc', status: 'present', since: null, duration: null, reason: '' },
-      { username: 'sarah', password: 'password', name: 'Dr. Sarah Moussaoui', role: 'medecin anesthesiste', status: 'present', since: null, duration: null, reason: '' },
-      { username: 'youcef', password: 'password', name: 'Youcef Hadj', role: 'technicien', status: 'present', since: null, duration: null, reason: '' },
-      { username: 'amina', password: 'password', name: 'Amina Khelifi', role: 'technicien', status: 'present', since: null, duration: null, reason: '' },
-      { username: 'mehdi', password: 'password', name: 'Dr. Mehdi Larbi', role: 'medecin anesthesiste', status: 'present', since: null, duration: null, reason: '' },
-      { username: 'nadia', password: 'password', name: 'Nadia Bouzid', role: 'technicien', status: 'present', since: null, duration: null, reason: '' },
-      { username: 'rachid', password: 'password', name: 'Rachid Ferhat', role: 'technicien', status: 'present', since: null, duration: null, reason: '' },
-      { username: 'leila', password: 'password', name: 'Leila Mansouri', role: 'technicien', status: 'present', since: null, duration: null, reason: '' },
+      { username: 'karim', password: 'password', name: 'Karim Benali', role: 'surveillant bloc', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
+      { username: 'sarah', password: 'password', name: 'Dr. Sarah Moussaoui', role: 'medecin anesthesiste', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
+      { username: 'youcef', password: 'password', name: 'Youcef Hadj', role: 'technicien', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
+      { username: 'amina', password: 'password', name: 'Amina Khelifi', role: 'technicien', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
+      { username: 'mehdi', password: 'password', name: 'Dr. Mehdi Larbi', role: 'medecin anesthesiste', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
+      { username: 'nadia', password: 'password', name: 'Nadia Bouzid', role: 'technicien', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
+      { username: 'rachid', password: 'password', name: 'Rachid Ferhat', role: 'technicien', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
+      { username: 'leila', password: 'password', name: 'Leila Mansouri', role: 'technicien', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
     ];
 
     for (const user of DEFAULT_TEAM) {
@@ -99,6 +117,7 @@ export const create = mutation({
       since: null,
       duration: null,
       reason: '',
+      lastSeen: Date.now(),
     });
 
     return userId;
@@ -117,11 +136,16 @@ export const savePushSubscription = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .collect();
     
-    const isDuplicate = existing.some(
+    const existingSub = existing.find(
       (sub) => sub.subscription.endpoint === args.subscription.endpoint
     );
 
-    if (!isDuplicate) {
+    if (existingSub) {
+      // The keys might have changed even if the endpoint is the same
+      await ctx.db.patch(existingSub._id, {
+        subscription: args.subscription,
+      });
+    } else {
       await ctx.db.insert("pushSubscriptions", {
         userId: args.userId,
         subscription: args.subscription,

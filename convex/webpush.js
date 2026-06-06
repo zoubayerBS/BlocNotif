@@ -36,16 +36,25 @@ export const sendPush = internalAction({
       }
     });
 
+    console.log("USING VAPID PUBLIC KEY:", process.env.VITE_VAPID_PUBLIC_KEY);
     console.log(`Attempting to send push: "${args.title}" to ${args.subscriptions.length} subscribers`);
 
     const promises = args.subscriptions.map((sub) =>
       webpush.sendNotification(sub, payload).catch(async (error) => {
         console.error("Error sending push to endpoint", sub.endpoint, error);
-        if (error.statusCode === 410 || error.statusCode === 404) {
-          console.log("Subscription has expired or is no longer valid:", sub.endpoint);
+        
+        const isStale = error.statusCode === 410 || error.statusCode === 404;
+        const isMismatchedKey = error.statusCode === 400 && error.body && error.body.includes("VapidPkHashMismatch");
+
+        if (isStale || isMismatchedKey) {
+          console.log(
+            isMismatchedKey 
+              ? "Subscription has a mismatched VAPID key. Removing from database." 
+              : "Subscription has expired or is no longer valid. Removing from database:"
+          );
           try {
             await ctx.runMutation(api.users.removeSubscriptionByEndpoint, { endpoint: sub.endpoint });
-            console.log("Removed stale subscription from database.");
+            console.log("Removed stale/mismatched subscription from database.");
           } catch (e) {
             console.error("Failed to remove stale subscription", e);
           }

@@ -76,7 +76,7 @@
       'Préparation matériel': Package,
       'Protocole anesthésique': Syringe,
       'Salle non opérable': ShieldAlert,
-      'Équipement HS': Wrench,
+      'Équipement hors service': Wrench,
       'Manque matériel': Package,
       'Urgence': AlertTriangle,
       'Info': Info,
@@ -99,12 +99,15 @@
     return 'Basse';
   }
 
-  function timeAgo(timestamp) {
-    const diff = Math.floor((Date.now() - timestamp) / 1000);
-    if (diff < 60) return 'À l\'instant';
-    if (diff < 3600) return `il y a ${Math.floor(diff / 60)}min`;
-    if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`;
-    return new Date(timestamp).toLocaleDateString('fr-FR');
+  function formatTime(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).replace(',', ' à');
   }
 
   $: filteredNotifications = filter === 'all'
@@ -210,7 +213,7 @@
               <span class="notif-author-avatar">{notif.authorName.charAt(0)}</span>
               <span class="notif-author">{notif.authorName}</span>
               <span class="meta-dot">•</span>
-              <span class="notif-time">{timeAgo(notif.timestamp)}</span>
+              <span class="notif-time">{formatTime(notif.timestamp)}</span>
             </div>
 
             {#if notif.takenBy}

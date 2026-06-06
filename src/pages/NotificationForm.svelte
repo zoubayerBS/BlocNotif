@@ -1,23 +1,23 @@
 <script>
-  import { store } from '../lib/store.js';
-  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
-  import { Bell } from 'lucide-svelte';
+  import { store } from "../lib/store.js";
+  import { createEventDispatcher, onMount, onDestroy } from "svelte";
+  import { Bell } from "lucide-svelte";
 
   const dispatch = createEventDispatcher();
 
-  let room = '';
+  let room = "";
   let roomDropdownOpen = false;
-  let type = '';
+  let type = "";
   let typeDropdownOpen = false;
-  let priority = '';
-  let patient = '';
-  let message = '';
+  let priority = "";
+  let patient = "";
+  let message = "";
 
   let rooms = [...store.state.rooms];
   let unsubscribe;
 
   onMount(() => {
-    unsubscribe = store.subscribe('notif-form', (state) => {
+    unsubscribe = store.subscribe("notif-form", (state) => {
       rooms = [...state.rooms];
     });
   });
@@ -26,36 +26,36 @@
     if (unsubscribe) unsubscribe();
   });
   const types = [
-    'Urgence',
-    'Préparation matériel',
-    'Protocole anesthésique',
-    'Manque matériel',
-    'Équipement HS',
-    'Salle non opérable',
-    'Info',
-    'Appel Astreinte'
+    "Urgence",
+    "Préparation matériel",
+    "Protocole anesthésique",
+    "Manque matériel",
+    "Équipement hors service",
+    "Salle non opérable",
+    "Info",
+    "Appel Astreinte",
   ];
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!room || !type || !priority) return;
-    dispatch('submit', { room, type, priority, patient, message });
+    dispatch("submit", { room, type, priority, patient, message });
   }
 
   function handleBackdrop(e) {
-    if (e.target === e.currentTarget) dispatch('close');
+    if (e.target === e.currentTarget) dispatch("close");
   }
   function handleWindowClick(e) {
-    if (roomDropdownOpen && !e.target.closest('#room-dropdown-container')) {
+    if (roomDropdownOpen && !e.target.closest("#room-dropdown-container")) {
       roomDropdownOpen = false;
     }
-    if (typeDropdownOpen && !e.target.closest('#type-dropdown-container')) {
+    if (typeDropdownOpen && !e.target.closest("#type-dropdown-container")) {
       typeDropdownOpen = false;
     }
   }
 
-  $: if (type !== 'Protocole anesthésique') {
-    patient = '';
+  $: if (type !== "Protocole anesthésique") {
+    patient = "";
   }
 </script>
 
@@ -69,10 +69,19 @@
       <h2 class="modal-title">
         <Bell size={24} /> Nouvelle alerte
       </h2>
-      <button class="modal-close" on:click={() => dispatch('close')}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
+      <button class="modal-close" on:click={() => dispatch("close")}>
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
         </svg>
       </button>
     </div>
@@ -85,11 +94,22 @@
           type="button"
           class="custom-select-trigger"
           class:open={roomDropdownOpen}
-          on:click={() => roomDropdownOpen = !roomDropdownOpen}
+          on:click={() => (roomDropdownOpen = !roomDropdownOpen)}
           aria-labelledby="room-label"
         >
-          {room ? room : 'Choisir une salle...'}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chevron" class:rotate={roomDropdownOpen}>
+          {room ? room : "Choisir une salle..."}
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="chevron"
+            class:rotate={roomDropdownOpen}
+          >
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
         </button>
@@ -101,11 +121,23 @@
                 type="button"
                 class="custom-select-option"
                 class:selected={room === r.name}
-                on:click={() => { room = r.name; roomDropdownOpen = false; }}
+                on:click={() => {
+                  room = r.name;
+                  roomDropdownOpen = false;
+                }}
               >
                 {r.name}
                 {#if room === r.name}
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--color-primary)"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
                 {/if}
@@ -117,16 +149,27 @@
 
       <!-- Type -->
       <div class="form-group relative" id="type-dropdown-container">
-        <div class="form-label" id="type-label">Type d'alerte</div>
+        <div class="form-label" id="type-label">Motif d'alerte</div>
         <button
           type="button"
           class="custom-select-trigger"
           class:open={typeDropdownOpen}
-          on:click={() => typeDropdownOpen = !typeDropdownOpen}
+          on:click={() => (typeDropdownOpen = !typeDropdownOpen)}
           aria-labelledby="type-label"
         >
-          {type ? type : 'Choisir un type...'}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chevron" class:rotate={typeDropdownOpen}>
+          {type ? type : "Choisir un type..."}
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="chevron"
+            class:rotate={typeDropdownOpen}
+          >
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
         </button>
@@ -138,11 +181,23 @@
                 type="button"
                 class="custom-select-option"
                 class:selected={type === t}
-                on:click={() => { type = t; typeDropdownOpen = false; }}
+                on:click={() => {
+                  type = t;
+                  typeDropdownOpen = false;
+                }}
               >
                 {t}
                 {#if type === t}
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--color-primary)"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
                 {/if}
@@ -155,12 +210,16 @@
       <!-- Priority -->
       <div class="form-group">
         <div class="form-label" id="priority-label">Priorité</div>
-        <div class="priority-selector" role="group" aria-labelledby="priority-label">
+        <div
+          class="priority-selector"
+          role="group"
+          aria-labelledby="priority-label"
+        >
           <button
             type="button"
             class="priority-btn high"
-            class:selected={priority === 'haute'}
-            on:click={() => priority = 'haute'}
+            class:selected={priority === "haute"}
+            on:click={() => (priority = "haute")}
           >
             <span class="priority-dot"></span>
             Haute
@@ -168,8 +227,8 @@
           <button
             type="button"
             class="priority-btn medium"
-            class:selected={priority === 'moyenne'}
-            on:click={() => priority = 'moyenne'}
+            class:selected={priority === "moyenne"}
+            on:click={() => (priority = "moyenne")}
           >
             <span class="priority-dot"></span>
             Moyenne
@@ -177,8 +236,8 @@
           <button
             type="button"
             class="priority-btn low"
-            class:selected={priority === 'basse'}
-            on:click={() => priority = 'basse'}
+            class:selected={priority === "basse"}
+            on:click={() => (priority = "basse")}
           >
             <span class="priority-dot"></span>
             Basse
@@ -187,9 +246,14 @@
       </div>
 
       <!-- Patient -->
-      {#if type === 'Protocole anesthésique'}
-        <div class="form-group" style="animation: slideDown var(--transition-base) ease-out;">
-          <label class="form-label" for="notif-patient">Patient (optionnel)</label>
+      {#if type === "Protocole anesthésique"}
+        <div
+          class="form-group"
+          style="animation: slideDown var(--transition-base) ease-out;"
+        >
+          <label class="form-label" for="notif-patient"
+            >Patient (optionnel)</label
+          >
           <input
             type="text"
             id="notif-patient"
@@ -201,7 +265,8 @@
 
       <!-- Message -->
       <div class="form-group">
-        <label class="form-label" for="notif-message">Message (optionnel)</label>
+        <label class="form-label" for="notif-message">Message (optionnel)</label
+        >
         <textarea
           id="notif-message"
           bind:value={message}
@@ -215,9 +280,18 @@
         class="submit-btn"
         disabled={!room || !type || !priority}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="22" y1="2" x2="11" y2="13"/>
-          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="22" y1="2" x2="11" y2="13" />
+          <polygon points="22 2 15 22 11 13 2 9 22 2" />
         </svg>
         Envoyer l'alerte
       </button>
@@ -286,7 +360,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
-    padding-bottom:  calc(var(--space-3xl) + var(--safe-area-bottom));
+    padding-bottom: calc(var(--space-3xl) + var(--safe-area-bottom));
   }
 
   .form-group {
@@ -303,7 +377,9 @@
     letter-spacing: 0.04em;
   }
 
-  .relative { position: relative; }
+  .relative {
+    position: relative;
+  }
 
   /* Custom Select Dropdown */
   .custom-select-trigger {
@@ -322,7 +398,8 @@
     min-height: 52px;
   }
 
-  .custom-select-trigger:focus, .custom-select-trigger.open {
+  .custom-select-trigger:focus,
+  .custom-select-trigger.open {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 4px var(--color-primary-glow);
     background: rgba(255, 255, 255, 0.85);
@@ -400,7 +477,9 @@
     min-height: 48px;
   }
 
-  .priority-btn:active { transform: scale(0.96); }
+  .priority-btn:active {
+    transform: scale(0.96);
+  }
 
   .priority-dot {
     width: 10px;
@@ -408,9 +487,15 @@
     border-radius: 50%;
   }
 
-  .priority-btn.high .priority-dot { background: var(--color-danger); }
-  .priority-btn.medium .priority-dot { background: var(--color-warning); }
-  .priority-btn.low .priority-dot { background: var(--color-success); }
+  .priority-btn.high .priority-dot {
+    background: var(--color-danger);
+  }
+  .priority-btn.medium .priority-dot {
+    background: var(--color-warning);
+  }
+  .priority-btn.low .priority-dot {
+    background: var(--color-success);
+  }
 
   .priority-btn.high.selected {
     border-color: var(--color-danger);
@@ -438,7 +523,11 @@
     gap: var(--space-sm);
     padding: var(--space-lg);
     border-radius: var(--radius-md);
-    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    background: linear-gradient(
+      135deg,
+      var(--color-primary),
+      var(--color-primary-dark)
+    );
     color: white;
     font-size: var(--fs-md);
     font-weight: var(--fw-semibold);

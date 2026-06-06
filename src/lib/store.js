@@ -11,9 +11,11 @@ class Store {
       notifications: [],
       absences: [],
       permutations: [],
+      permutations: [],
       rooms: [],
     };
     this._listeners = new Map();
+    this._eventListeners = new Map();
 
     // Load local session
     try {
@@ -43,6 +45,12 @@ class Store {
 
     // 2. Subscribe to notifications
     convex.onUpdate(api.notifications.list, {}, (notifs) => {
+      if (this._state.notifications.length > 0) {
+        const newNotifs = notifs.filter(n => !this._state.notifications.some(old => old._id === n._id));
+        if (newNotifs.length > 0) {
+          this._emitEvent('new_notification', newNotifs);
+        }
+      }
       this._state.notifications = notifs;
       this._notifyAll();
     });
@@ -64,6 +72,13 @@ class Store {
       this._notifyAll();
     });
     
+    // Start presence heartbeat
+    setInterval(() => {
+      if (this._state.currentUser) {
+        httpClient.mutation(api.users.updatePresence, { userId: this._state.currentUser._id }).catch(() => {});
+      }
+    }, 15000);
+
     // Seed database if empty (fire and forget)
     httpClient.mutation(api.users.seedTeam, {}).catch(console.error);
     httpClient.mutation(api.rooms.seed, {}).catch(console.error);
@@ -91,6 +106,22 @@ class Store {
     }
   }
 
+  on(event, callback) {
+    if (!this._eventListeners.has(event)) {
+      this._eventListeners.set(event, new Set());
+    }
+    this._eventListeners.get(event).add(callback);
+    return () => this._eventListeners.get(event)?.delete(callback);
+  }
+
+  _emitEvent(event, data) {
+    if (this._eventListeners.has(event)) {
+      for (const cb of this._eventListeners.get(event)) {
+        try { cb(data); } catch (e) { console.error(e); }
+      }
+    }
+  }
+
   // --- Push Notifications ---
   
   async subscribeToPush() {
@@ -101,26 +132,16 @@ class Store {
       const registration = await navigator.serviceWorker.ready;
       let subscription = await registration.pushManager.getSubscription();
       
-      // Safari/APNs throws VapidPkHashMismatch if the subscription was created with an old key.
-      // To be absolutely safe, we always unsubscribe first to force a fresh subscription with the current key.
-      if (subscription) {
-        await subscription.unsubscribe();
-      }
-
-      // You'll need your VAPID public key here
-      const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-      if (!vapidPublicKey) {
-        throw new Error('VITE_VAPID_PUBLIC_KEY is not defined in environment variables');
-      }
+      // Hardcoded Public Key
+      const vapidPublicKey = "BO02vu7mvy8oDCzb8PqV7f64_9wfcSK9zAPmdLivlbCWkpe48cBXJcy7jzaMbiJ2_jwgPAj0zvo2RPnGMVQp5ic";
+      const convertedVapidKey = this.urlBase64ToUint8Array(vapidPublicKey);
       
-      // Strip any accidental quotes
-      const cleanKey = vapidPublicKey.replace(/^["']|["']$/g, '');
-      const convertedVapidKey = this.urlBase64ToUint8Array(cleanKey);
-      
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: convertedVapidKey
-      });
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedVapidKey
+        });
+      }
 
       // Save to Convex
       await httpClient.mutation(api.users.savePushSubscription, {
@@ -213,6 +234,21 @@ class Store {
     try {
       const user = await httpClient.mutation(api.users.create, userData);
       return { success: true, user };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  async changePassword(oldPassword, newPassword) {
+    if (!this._state.currentUser) return { success: false, error: "Non connecté" };
+    try {
+      await httpClient.mutation(api.users.updatePassword, {
+        userId: this._state.currentUser._id,
+        oldPassword,
+        newPassword
+      });
+      return { success: true };
     } catch (e) {
       console.error(e);
       return { success: false, error: e.message };
