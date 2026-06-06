@@ -9,6 +9,7 @@
   import BottomNav from "./components/BottomNav.svelte";
   import TeamSidebar from "./components/TeamSidebar.svelte";
   import Toast from "./components/Toast.svelte";
+  import IOSInstallBanner from "./components/IOSInstallBanner.svelte";
 
   import { onMount } from "svelte";
 
@@ -241,6 +242,9 @@
       bind:open={sidebarOpen}
       on:close={() => (sidebarOpen = false)}
     />
+
+    <!-- iOS PWA Install Banner -->
+    <IOSInstallBanner />
 
     <!-- Toasts -->
     <div class="toast-container">
