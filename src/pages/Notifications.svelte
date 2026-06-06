@@ -260,26 +260,27 @@
             </div>
 
             {#if notif.type === 'Annonce'}
-              <div style="display: flex; align-items: center; gap: var(--space-sm);">
-                {#if notif.acknowledgedBy?.some(a => a.userId === currentUser?._id)}
+              <div style="display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;">
+                {#if currentUser && notif.authorId === currentUser._id}
+                  <!-- Auteur : bouton Clôturer -->
+                  <button class="resolve-btn" on:click={() => handleResolve(notif._id)}>
+                    Clôturer
+                  </button>
+                {:else if currentUser && (notif.acknowledgedBy || []).some(a => a.userId === currentUser._id)}
+                  <!-- Déjà validé : badge OK/Lu -->
                   <span class="ack-status-badge">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                     OK / Lu
                   </span>
-                {:else if notif.authorId !== currentUser?._id}
+                {:else if currentUser}
+                  <!-- Pas encore validé : bouton OK vert -->
                   <button class="ack-btn" on:click={() => handleAcknowledge(notif._id)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                     J'ai compris (OK)
-                  </button>
-                {/if}
-
-                {#if notif.authorId === currentUser?._id}
-                  <button class="resolve-btn" on:click={() => handleResolve(notif._id)}>
-                    Clôturer
                   </button>
                 {/if}
               </div>
