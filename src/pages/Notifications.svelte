@@ -284,6 +284,34 @@
                   </button>
                 {/if}
               </div>
+            {:else if notif.type === 'Appel Astreinte' && notif.targetId === currentUser?._id && !(notif.acknowledgedBy || []).some(a => a.userId === currentUser._id)}
+              <button class="ack-btn" on:click={() => handleAcknowledge(notif._id)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                OK / Lu
+              </button>
+            {:else if notif.type === 'Appel Astreinte' && notif.targetId === currentUser?._id && (notif.acknowledgedBy || []).some(a => a.userId === currentUser._id)}
+              <span class="ack-status-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                OK / Lu
+              </span>
+            {:else if notif.type === 'Appel Astreinte' && !notif.targetId && currentUser?.role?.includes('technicien') && !(notif.acknowledgedBy || []).some(a => a.userId === currentUser._id)}
+              <button class="ack-btn" on:click={() => handleAcknowledge(notif._id)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                OK / Lu
+              </button>
+            {:else if notif.type === 'Appel Astreinte' && !notif.targetId && currentUser?.role?.includes('technicien') && (notif.acknowledgedBy || []).some(a => a.userId === currentUser._id)}
+              <span class="ack-status-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                OK / Lu
+              </span>
             {:else if notif.takenBy}
               <div class="notif-taken">
                 <span class="taken-badge">
