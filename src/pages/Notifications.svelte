@@ -235,23 +235,23 @@
             <p class="notif-message">{notif.message}</p>
           {/if}
 
-          {#if notif.type === 'Annonce' && (notif.authorId === currentUser?._id || currentUser?.role?.includes('surveillant')) && notif.acknowledgedBy?.length > 0}
-            <div class="notif-divider"></div>
-            <div class="acks-section">
-              <span class="acks-title">Lu par ({notif.acknowledgedBy.length}) :</span>
-              <div class="acks-list">
-                {#each notif.acknowledgedBy as ack}
-                  <span class="ack-badge" title={formatTime(ack.timestamp)}>
-                    {ack.userName}
-                  </span>
-                {/each}
+            {#if (notif.type === 'Annonce' || notif.type === 'Appel Astreinte') && (notif.authorId === currentUser?._id || currentUser?.role?.includes('surveillant')) && notif.acknowledgedBy?.length > 0}
+              <div class="notif-divider"></div>
+              <div class="acks-section">
+                <span class="acks-title">Lu par ({notif.acknowledgedBy.length}) :</span>
+                <div class="acks-list">
+                  {#each notif.acknowledgedBy as ack}
+                    <span class="ack-badge" title={formatTime(ack.timestamp)}>
+                      {ack.userName}
+                    </span>
+                  {/each}
+                </div>
               </div>
-            </div>
-          {/if}
+{/if}
 
-          <div class="notif-divider"></div>
+            <div class="notif-divider"></div>
 
-          <div class="notif-footer">
+            <div class="notif-footer">
             <div class="notif-meta">
               <span class="notif-author-avatar">{notif.authorName.charAt(0)}</span>
               <span class="notif-author">{notif.authorName}</span>
