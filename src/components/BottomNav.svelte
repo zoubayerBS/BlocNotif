@@ -98,10 +98,10 @@
     align-items: stretch;
     height: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
     padding-bottom: var(--safe-area-bottom);
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--bg-card);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-card);
   }
 
   .nav-item {

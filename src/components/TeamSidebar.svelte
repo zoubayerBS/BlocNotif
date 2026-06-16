@@ -8,18 +8,6 @@
   let members = [...store.state.teamMembers];
   let unsubscribe;
 
-  // Live timer update
-  let now = Date.now();
-  let timerInterval;
-
-  $: if (open) {
-    now = Date.now();
-    clearInterval(timerInterval);
-    timerInterval = setInterval(() => { now = Date.now(); }, 1000);
-  } else {
-    clearInterval(timerInterval);
-  }
-
   onMount(() => {
     unsubscribe = store.subscribe('sidebar', (state) => {
       members = [...state.teamMembers];
@@ -28,31 +16,7 @@
 
   onDestroy(() => {
     if (unsubscribe) unsubscribe();
-    clearInterval(timerInterval);
   });
-
-  function formatDuration(since, currentNow) {
-    if (!since) return '';
-    const diff = Math.floor((currentNow - since) / 1000);
-    const m = Math.floor(diff / 60);
-    const s = diff % 60;
-    if (m > 0) return `${m}m ${s.toString().padStart(2, '0')}s`;
-    return `${s}s`;
-  }
-
-  function getStatusColor(status, lastSeen) {
-    if (Date.now() - (lastSeen || 0) > 35000) return 'var(--text-muted)';
-    if (status === 'present') return 'var(--color-success)';
-    if (status === 'pause') return 'var(--color-warning)';
-    return 'var(--color-danger)';
-  }
-
-  function getStatusLabel(status, lastSeen) {
-    if (Date.now() - (lastSeen || 0) > 35000) return 'Hors ligne';
-    if (status === 'present') return 'Présent';
-    if (status === 'pause') return 'En pause';
-    return 'Absent';
-  }
 
   function getInitials(name) {
     return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -86,31 +50,15 @@
         </button>
       </div>
 
-      <div class="sidebar-stats">
-        <div class="stat-chip present">
-          <span class="stat-dot"></span>
-          {members.filter(m => m.status === 'present' && Date.now() - (m.lastSeen || 0) <= 35000).length} présents
-        </div>
-        <div class="stat-chip pause">
-          <span class="stat-dot"></span>
-          {members.filter(m => m.status === 'pause' && Date.now() - (m.lastSeen || 0) <= 35000).length} en pause
-        </div>
-        <div class="stat-chip absent">
-          <span class="stat-dot"></span>
-          {members.filter(m => m.status === 'absent' || Date.now() - (m.lastSeen || 0) > 35000).length} absents/hors ligne
-        </div>
-      </div>
-
       <div class="member-list">
         {#each members as member}
-          <div class="member-card" class:is-away={member.status !== 'present' || Date.now() - (member.lastSeen || 0) > 35000}>
+          <div class="member-card">
             <div class="member-avatar" style="background: {
               member.role === 'surveillant bloc' ? 'linear-gradient(135deg, var(--color-accent), #00b3ad)' : 
               member.role === 'medecin anesthesiste' ? 'linear-gradient(135deg, #a29bfe, #6c5ce7)' : 
               'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))'
             }">
               {getInitials(member.name)}
-              <span class="status-dot" style="background: {getStatusColor(member.status, member.lastSeen)}"></span>
             </div>
             <div class="member-info">
               <span class="member-name">
@@ -119,12 +67,6 @@
                   <span class="role-badge badge-surveillant">Surveillant</span>
                 {:else if member.role === 'medecin anesthesiste'}
                   <span class="role-badge badge-medecin">Médecin</span>
-                {/if}
-              </span>
-              <span class="member-status" style="color: {getStatusColor(member.status, member.lastSeen)}">
-                {getStatusLabel(member.status, member.lastSeen)}
-                {#if member.since && member.status !== 'present' && Date.now() - (member.lastSeen || 0) <= 35000}
-                  <span class="member-timer">• {formatDuration(member.since, now)}</span>
                 {/if}
               </span>
             </div>
@@ -151,8 +93,8 @@
     right: 0;
     bottom: 0;
     width: min(320px, 85vw);
-    background: #ffffff;
-    border-left: 1px solid var(--border-color);
+    background: var(--bg-card);
+    border-left: 1px solid var(--border-card);
     display: flex;
     flex-direction: column;
     animation: slideInRight var(--transition-base) ease-out;
@@ -192,37 +134,6 @@
     transform: scale(0.9);
   }
 
-  .sidebar-stats {
-    display: flex;
-    gap: var(--space-sm);
-    padding: var(--space-md) var(--space-lg);
-    border-bottom: 1px solid var(--border-color);
-    overflow-x: auto;
-  }
-
-  .stat-chip {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border-radius: var(--radius-full);
-    font-size: var(--fs-xs);
-    font-weight: var(--fw-semibold);
-    white-space: nowrap;
-    background: var(--bg-elevated);
-    color: var(--text-secondary);
-  }
-
-  .stat-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  }
-
-  .stat-chip.present .stat-dot { background: var(--color-success); }
-  .stat-chip.pause .stat-dot { background: var(--color-warning); }
-  .stat-chip.absent .stat-dot { background: var(--color-danger); }
-
   .member-list {
     flex: 1;
     overflow-y: auto;
@@ -238,12 +149,7 @@
     transition: background var(--transition-fast);
   }
 
-  .member-card.is-away {
-    opacity: 0.75;
-  }
-
   .member-avatar {
-    position: relative;
     width: 42px;
     height: 42px;
     border-radius: var(--radius-full);
@@ -254,16 +160,6 @@
     font-weight: var(--fw-bold);
     color: white;
     flex-shrink: 0;
-  }
-
-  .status-dot {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 2px solid var(--bg-surface);
   }
 
   .member-info {
@@ -298,14 +194,5 @@
   .badge-medecin {
     background: rgba(108, 92, 231, 0.15);
     color: #6c5ce7;
-  }
-
-  .member-status {
-    font-size: var(--fs-xs);
-    font-weight: var(--fw-medium);
-  }
-
-  .member-timer {
-    font-variant-numeric: tabular-nums;
   }
 </style>

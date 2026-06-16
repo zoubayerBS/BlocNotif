@@ -524,8 +524,8 @@
     align-items: center;
     gap: var(--space-md);
     padding: var(--space-md);
-    background: white;
-    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-sm);
     transition: all 0.2s;
@@ -566,17 +566,17 @@
   }
 
   .notif-card {
-    background: rgba(255, 255, 255, 0.75) !important;
-    border: 1px solid rgba(255, 255, 255, 0.9) !important;
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.04) !important;
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.04);
     border-radius: var(--radius-xl);
     padding: var(--space-xl);
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
     animation: fadeInUp var(--transition-slow) ease-out both;
     position: relative;
     overflow: hidden;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 
   .notif-card:hover {
@@ -695,10 +695,10 @@
     font-size: var(--fs-base);
     color: var(--text-secondary);
     line-height: 1.5;
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--bg-surface);
     padding: var(--space-md);
     border-radius: var(--radius-md);
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--border-card);
   }
 
   .notif-footer {
@@ -856,7 +856,7 @@
   .iade-modal {
     width: 90%;
     max-width: 400px;
-    background: white;
+    background: var(--bg-card);
     border-radius: var(--radius-2xl);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
     animation: slideUp 0.3s ease-out;
@@ -910,7 +910,7 @@
 
   .iade-card:hover {
     border-color: var(--color-primary);
-    background: white;
+    background: var(--bg-elevated);
   }
 
   .iade-avatar {

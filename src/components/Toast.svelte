@@ -65,10 +65,10 @@
     align-items: center;
     gap: var(--space-md);
     padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--bg-card);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid var(--border-card);
     border-radius: var(--radius-xl);
     box-shadow: 0 10px 40px -10px var(--toast-color), 0 0 0 1px color-mix(in srgb, var(--toast-color) 20%, transparent);
     min-width: 300px;

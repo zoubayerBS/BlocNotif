@@ -761,7 +761,7 @@
     padding: 12px 16px;
     border: 1.5px solid var(--border-color);
     border-radius: var(--radius-md);
-    background-color: #ffffff;
+    background-color: var(--bg-card);
     font-size: var(--fs-base);
     font-family: inherit;
     color: var(--text-primary);
@@ -782,8 +782,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px 12px 56px;
-    background: white;
-    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-color);
     border-radius: var(--radius-lg);
     cursor: pointer;
     transition: all var(--transition-fast);
@@ -867,7 +867,7 @@
   .modal {
     width: 100%;
     max-height: 90vh;
-    background: #ffffff;
+    background: var(--bg-card);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     overflow-y: auto;
     animation: slideUp var(--transition-base) ease-out;
@@ -959,7 +959,7 @@
     top: calc(100% + 8px);
     left: 0;
     right: 0;
-    background: #ffffff;
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);

@@ -9,8 +9,6 @@ class Store {
       currentUser: null,
       teamMembers: [],
       notifications: [],
-      absences: [],
-      permutations: [],
       permutations: [],
       rooms: [],
     };
@@ -55,13 +53,7 @@ class Store {
       this._notifyAll();
     });
 
-    // 3. Subscribe to absences
-    convex.onUpdate(api.absences.list, {}, (absences) => {
-      this._state.absences = absences;
-      this._notifyAll();
-    });
-
-    // 4. Subscribe to permutations
+    // 3. Subscribe to permutations
     convex.onUpdate(api.permutations.list, {}, (perms) => {
       this._state.permutations = perms;
       this._notifyAll();
@@ -72,13 +64,6 @@ class Store {
       this._notifyAll();
     });
     
-    // Start presence heartbeat
-    setInterval(() => {
-      if (this._state.currentUser) {
-        httpClient.mutation(api.users.updatePresence, { userId: this._state.currentUser._id }).catch(() => {});
-      }
-    }, 15000);
-
     // Seed database if empty (fire and forget)
     httpClient.mutation(api.users.seedTeam, {}).catch(console.error);
     httpClient.mutation(api.rooms.seed, {}).catch(console.error);
@@ -197,20 +182,17 @@ class Store {
   // --- Auth ---
 
   async loginWithUsername(username, password) {
-    // 1. Demander la permission immédiatement pour ne pas perdre le contexte du "clic" utilisateur (requis par Safari/iOS)
     let permissionPromise = null;
     if ('Notification' in window && Notification.permission === 'default') {
       permissionPromise = Notification.requestPermission();
     }
 
     try {
-      // 2. Faire la requête de connexion
-      const user = await httpClient.query(api.users.login, { username, password });
+      const user = await httpClient.action(api.auth.login, { username, password });
       if (user) {
         this._state.currentUser = { ...user };
         localStorage.setItem(SESSION_KEY, JSON.stringify(user));
         
-        // 3. Traiter l'abonnement push
         if (permissionPromise) {
           const permission = await permissionPromise;
           if (permission === 'granted') {
@@ -232,7 +214,7 @@ class Store {
 
   async register(userData) {
     try {
-      const user = await httpClient.mutation(api.users.create, userData);
+      const user = await httpClient.action(api.auth.register, userData);
       return { success: true, user };
     } catch (e) {
       console.error(e);
@@ -243,7 +225,7 @@ class Store {
   async changePassword(oldPassword, newPassword) {
     if (!this._state.currentUser) return { success: false, error: "Non connecté" };
     try {
-      await httpClient.mutation(api.users.updatePassword, {
+      await httpClient.action(api.auth.changePassword, {
         userId: this._state.currentUser._id,
         oldPassword,
         newPassword
@@ -349,51 +331,6 @@ class Store {
         userId: this._state.currentUser._id,
         userName: this._state.currentUser.name,
       });
-    } catch (e) { console.error(e); }
-  }
-
-  // --- Absences ---
-
-  async setStatus(type, duration = null, reason = '') {
-    const user = this._state.currentUser;
-    if (!user) return;
-
-    try {
-      const isRetour = (type === 'retour');
-      
-      // Update user status
-      await httpClient.mutation(api.users.updateStatus, {
-        userId: user._id,
-        status: isRetour ? 'present' : type,
-        since: isRetour ? null : Date.now(),
-        duration: isRetour ? null : duration,
-        reason: isRetour ? '' : reason,
-      });
-
-      // Log absence if not a return
-      if (!isRetour) {
-        await httpClient.mutation(api.absences.create, {
-          userId: user._id,
-          userName: user.name,
-          type,
-          duration,
-          reason,
-        });
-      }
-
-      // Add a notification for the team
-      const notifType = isRetour ? 'Retour' : (type === 'pause' ? 'Pause' : 'Absence');
-      const message = isRetour 
-        ? `${user.name} est de retour.` 
-        : `${user.name} est en ${type}${duration ? ` pour ${duration} min` : ''}.${reason ? ` Motif : ${reason}` : ''}`;
-      
-      await this.addNotification({
-        room: 'Équipe',
-        type: notifType,
-        priority: 'low',
-        message: message
-      });
-
     } catch (e) { console.error(e); }
   }
 

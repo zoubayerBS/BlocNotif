@@ -231,10 +231,10 @@
   }
 
   .login-card {
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--bg-card);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--border-card);
     border-radius: var(--radius-2xl);
     padding: var(--space-2xl);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -256,7 +256,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--border-card);
     box-shadow: 0 8px 24px var(--color-primary-glow);
   }
 
@@ -333,7 +333,7 @@
     padding: 14px 16px 14px 56px;
     border-radius: var(--radius-lg);
     border: 1.5px solid rgba(0, 0, 0, 0.08);
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--bg-card);
     font-size: var(--fs-base);
     color: var(--text-primary);
     transition: all var(--transition-fast);
@@ -341,7 +341,7 @@
 
   input:focus {
     outline: none;
-    background: white;
+    background: var(--bg-elevated);
     border-color: var(--color-primary);
     box-shadow: 0 0 0 4px var(--color-primary-glow);
   }
@@ -364,7 +364,7 @@
     padding: 14px 16px 14px 56px;
     border-radius: var(--radius-lg);
     border: 1.5px solid rgba(0, 0, 0, 0.08);
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--bg-card);
     font-size: var(--fs-base);
     color: var(--text-primary);
     display: flex;
@@ -376,7 +376,7 @@
 
   .custom-select-wrapper.open .custom-select-trigger,
   .custom-select-trigger:hover {
-    background: white;
+    background: var(--bg-elevated);
     border-color: var(--color-primary);
   }
 
@@ -404,8 +404,8 @@
     top: calc(100% + 8px);
     left: 0;
     right: 0;
-    background: white;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     z-index: 50;

@@ -396,7 +396,7 @@
   .modal {
     width: 100%;
     max-height: 92vh;
-    background: #ffffff;
+    background: var(--bg-card);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     overflow-y: auto;
     animation: slideUp var(--transition-base) ease-out;
@@ -410,7 +410,7 @@
     border-bottom: 1px solid var(--border-color);
     position: sticky;
     top: 0;
-    background: #ffffff !important;
+    background: var(--bg-card) !important;
     z-index: 1;
   }
 
@@ -484,7 +484,7 @@
   .custom-select-trigger.open {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 4px var(--color-primary-glow);
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--bg-elevated);
   }
 
   .chevron {
@@ -502,7 +502,7 @@
     top: calc(100% + 8px);
     left: 0;
     right: 0;
-    background: #ffffff;
+    background: var(--bg-card);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--border-color);

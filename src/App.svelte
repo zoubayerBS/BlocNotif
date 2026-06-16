@@ -1,6 +1,6 @@
 <script>
   import { store } from "./lib/store.js";
-  import { Hospital } from "lucide-svelte";
+  import { Hospital, Moon, Sun } from "lucide-svelte";
   import Login from "./pages/Login.svelte";
   import Register from "./pages/Register.svelte";
   import Notifications from "./pages/Notifications.svelte";
@@ -12,6 +12,21 @@
   import IOSInstallBanner from "./components/IOSInstallBanner.svelte";
 
   import { onMount } from "svelte";
+
+  const savedTheme = localStorage.getItem('blocnotif_theme');
+  if (savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+
+  let darkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+
+  function toggleDarkMode() {
+    darkMode = !darkMode;
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('blocnotif_theme', darkMode ? 'dark' : 'light');
+  }
 
   let currentUser = store.state.currentUser;
   let activeTab = "notifications";
@@ -161,6 +176,17 @@
       </div>
       <div class="header-right">
         <button
+          class="header-btn theme-toggle"
+          on:click={toggleDarkMode}
+          title={darkMode ? 'Mode clair' : 'Mode sombre'}
+        >
+          {#if darkMode}
+            <Sun size={20} />
+          {:else}
+            <Moon size={20} />
+          {/if}
+        </button>
+        <button
           class="header-btn team-btn"
           on:click={() => (sidebarOpen = true)}
           title="Équipe"
@@ -181,8 +207,7 @@
             <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
           <span class="team-count"
-            >{store.state.teamMembers.filter((m) => m.status === "present")
-              .length}</span
+            >{store.state.teamMembers.length}</span
           >
         </button>
         <div class="user-menu-container">
@@ -200,16 +225,6 @@
                 <strong>{currentUser.name}</strong>
                 <span>{currentUser.role}</span>
               </div>
-              <div class="dropdown-divider"></div>
-              <button class="dropdown-item" on:click={() => { userMenuOpen = false; store.setStatus('present'); }}>
-                🟢 Présent
-              </button>
-              <button class="dropdown-item" on:click={() => { userMenuOpen = false; store.setStatus('pause', 15); }}>
-                🟠 En pause (15m)
-              </button>
-              <button class="dropdown-item" on:click={() => { userMenuOpen = false; store.setStatus('absent'); }}>
-                🔴 S'absenter
-              </button>
               <div class="dropdown-divider"></div>
               <button class="dropdown-item" on:click={() => { userMenuOpen = false; showPasswordModal = true; }}>
                 Changer mot de passe
@@ -310,10 +325,10 @@
     justify-content: space-between;
     padding: var(--space-md) var(--space-lg);
     height: 72px; /* Slightly taller for a more premium feel */
-    background: rgba(255, 255, 255, 0.8) !important;
+    background: var(--bg-card) !important;
     backdrop-filter: blur(24px) !important;
     -webkit-backdrop-filter: blur(24px) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border-bottom: 1px solid var(--border-card) !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.03);
   }
 
@@ -335,10 +350,10 @@
     justify-content: center;
     width: 40px;
     height: 40px;
-    background: linear-gradient(135deg, var(--color-primary-glow), rgba(255, 255, 255, 0.5));
+    background: linear-gradient(135deg, var(--color-primary-glow), var(--bg-elevated));
     color: var(--color-primary);
     border-radius: var(--radius-md);
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--border-card);
     box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
   }
 
@@ -370,9 +385,9 @@
     width: 44px;
     height: 44px;
     border-radius: var(--radius-full);
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--bg-elevated);
     color: var(--text-secondary);
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--border-card);
     transition: all var(--transition-base);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
   }
@@ -436,10 +451,10 @@
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    background: white;
+    background: var(--bg-card);
     border-radius: var(--radius-lg);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-card);
     min-width: 200px;
     z-index: 1000;
     overflow: hidden;
@@ -510,7 +525,7 @@
   }
 
   .password-modal {
-    background: white;
+    background: var(--bg-card);
     border-radius: var(--radius-xl);
     padding: var(--space-xl);
     width: 100%;

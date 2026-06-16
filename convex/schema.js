@@ -4,13 +4,13 @@ import { v } from "convex/values";
 export default defineSchema({
   users: defineTable({
     username: v.string(),
-    password: v.string(), // Note: In a real prod app, use proper hashing
+    password: v.string(),
     name: v.string(),
     role: v.string(),
-    status: v.string(), // "present", "pause", "absent"
-    since: v.union(v.number(), v.null()),
-    duration: v.union(v.number(), v.null()),
-    reason: v.string(),
+    status: v.optional(v.string()),
+    since: v.optional(v.union(v.number(), v.null())),
+    duration: v.optional(v.union(v.number(), v.null())),
+    reason: v.optional(v.string()),
     lastSeen: v.optional(v.number()),
   }).index("by_username", ["username"]),
 

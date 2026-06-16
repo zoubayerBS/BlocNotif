@@ -1,9 +1,11 @@
 <script>
   import { 
     Settings, Users, Bell, Shield, LogOut, ChevronRight, UserPlus, 
-    Home, Trash2, Plus, Edit2, Check, X, ShieldAlert, ShieldCheck 
+    Home, Trash2, Plus, Edit2, Check, X, ShieldAlert, ShieldCheck,     Lock, Moon, Sun
   } from 'lucide-svelte';
   import { store } from '../lib/store.js';
+  import { httpClient } from '../lib/convex.js';
+  import { api } from '../../convex/_generated/api.js';
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import ConfirmModal from '../components/ConfirmModal.svelte';
 
@@ -20,6 +22,8 @@
   // Room Management State
   let newRoomName = '';
   let isAddingRoom = false;
+  let migratingPasswords = false;
+  let darkMode = false;
 
   // Confirmation Modal State
   let showConfirm = false;
@@ -41,6 +45,7 @@
   }
 
   onMount(() => {
+    darkMode = document.documentElement.getAttribute('data-theme') === 'dark';
     unsubscribe = store.subscribe('settings-page', (state) => {
       rooms = [...state.rooms];
       teamMembers = [...state.teamMembers];
@@ -113,6 +118,31 @@
 
   function handleLogout() {
     store.logout();
+  }
+
+  async function handleMigratePasswords() {
+    triggerConfirm({
+      title: 'Sécuriser les mots de passe',
+      message: 'Hacher tous les mots de passe en clair avec bcrypt ? Cette action est irréversible.',
+      type: 'danger',
+      onConfirm: async () => {
+        migratingPasswords = true;
+        try {
+          const result = await httpClient.action(api.auth.migratePasswords);
+          dispatch('toast', { message: result, type: 'success' });
+        } catch (e) {
+          dispatch('toast', { message: e.message || 'Erreur lors de la migration', type: 'error' });
+        } finally {
+          migratingPasswords = false;
+        }
+      }
+    });
+  }
+
+  function toggleDarkMode() {
+    darkMode = !darkMode;
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('blocnotif_theme', darkMode ? 'dark' : 'light');
   }
 
   async function handleEnableNotifications() {
@@ -265,6 +295,20 @@
             </label>
           </div>
 
+          <div class="settings-item">
+            <div class="item-icon" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">
+              {#if darkMode}<Moon size={20} />{:else}<Sun size={20} />{/if}
+            </div>
+            <div class="item-content">
+              <span class="item-label">Mode Sombre</span>
+              <span class="item-description">{darkMode ? 'Désactiver le thème sombre' : 'Activer le thème sombre'}</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" checked={darkMode} on:change={toggleDarkMode}>
+              <span class="slider"></span>
+            </label>
+          </div>
+
           <button class="settings-item btn-item" on:click={handleEnableNotifications}>
             <div class="item-icon bell-icon"><Bell size={20} /></div>
             <div class="item-content">
@@ -274,6 +318,17 @@
             <ChevronRight size={18} class="text-muted" />
           </button>
           
+          {#if isSurveillant}
+            <button class="settings-item btn-item" on:click={handleMigratePasswords} disabled={migratingPasswords}>
+              <div class="item-icon" style="background: rgba(251, 191, 36, 0.15); color: #d97706;"><Lock size={20} /></div>
+              <div class="item-content">
+                <span class="item-label">{migratingPasswords ? 'Migration en cours...' : 'Sécuriser les mots de passe'}</span>
+                <span class="item-description">Hacher les mots de passe en clair avec bcrypt</span>
+              </div>
+              <ChevronRight size={18} class="text-muted" />
+            </button>
+          {/if}
+
           <button class="settings-item btn-item logout-btn" on:click={handleLogout}>
             <div class="item-icon"><LogOut size={20} /></div>
             <div class="item-content">
@@ -349,7 +404,7 @@
   }
 
   .section-tab.active {
-    background: white;
+    background: var(--bg-card);
     color: var(--color-primary);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   }
@@ -393,7 +448,7 @@
   .add-form {
     display: flex;
     gap: var(--space-sm);
-    background: white;
+    background: var(--bg-card);
     padding: var(--space-sm);
     border-radius: var(--radius-lg);
     border: 1.5px solid var(--color-primary);
@@ -434,7 +489,7 @@
   }
 
   .admin-item {
-    background: white;
+    background: var(--bg-card);
     padding: var(--space-md) var(--space-lg);
     border-radius: var(--radius-xl);
     border: 1px solid var(--border-color);
@@ -497,9 +552,9 @@
 
   /* Settings List Reused */
   .settings-list {
-    background: white;
+    background: var(--bg-card);
     border-radius: var(--radius-xl);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-card);
     overflow: hidden;
   }
 
@@ -509,9 +564,9 @@
     align-items: center;
     gap: var(--space-md);
     padding: var(--space-md) var(--space-lg);
-    background: white;
+    background: var(--bg-card);
     border: none;
-    border-bottom: 1px solid var(--border-color-light);
+    border-bottom: 1px solid var(--border-color);
     text-align: left;
   }
 

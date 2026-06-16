@@ -1,7 +1,6 @@
-import { query, mutation } from "./_generated/server";
+import { query, internalQuery, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
-// Mock initialization to seed default team if empty
 export const remove = mutation({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
@@ -16,21 +15,10 @@ export const updateRole = mutation({
   },
 });
 
-export const updatePassword = mutation({
-  args: { userId: v.id("users"), oldPassword: v.string(), newPassword: v.string() },
+export const setPassword = mutation({
+  args: { userId: v.id("users"), password: v.string() },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("Utilisateur introuvable");
-    if (user.password !== args.oldPassword) throw new Error("Ancien mot de passe incorrect");
-    await ctx.db.patch(args.userId, { password: args.newPassword });
-    return true;
-  },
-});
-
-export const updatePresence = mutation({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.userId, { lastSeen: Date.now() });
+    await ctx.db.patch(args.userId, { password: args.password });
   },
 });
 
@@ -41,14 +29,14 @@ export const seedTeam = mutation({
     if (existingUsers.length > 0) return "Already seeded";
 
     const DEFAULT_TEAM = [
-      { username: 'karim', password: 'password', name: 'Karim Benali', role: 'surveillant bloc', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
-      { username: 'sarah', password: 'password', name: 'Dr. Sarah Moussaoui', role: 'medecin anesthesiste', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
-      { username: 'youcef', password: 'password', name: 'Youcef Hadj', role: 'technicien', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
-      { username: 'amina', password: 'password', name: 'Amina Khelifi', role: 'technicien', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
-      { username: 'mehdi', password: 'password', name: 'Dr. Mehdi Larbi', role: 'medecin anesthesiste', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
-      { username: 'nadia', password: 'password', name: 'Nadia Bouzid', role: 'technicien', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
-      { username: 'rachid', password: 'password', name: 'Rachid Ferhat', role: 'technicien', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
-      { username: 'leila', password: 'password', name: 'Leila Mansouri', role: 'technicien', status: 'present', since: null, duration: null, reason: '', lastSeen: Date.now() },
+      { username: 'karim', password: 'password', name: 'Karim Benali', role: 'surveillant bloc' },
+      { username: 'sarah', password: 'password', name: 'Dr. Sarah Moussaoui', role: 'medecin anesthesiste' },
+      { username: 'youcef', password: 'password', name: 'Youcef Hadj', role: 'technicien' },
+      { username: 'amina', password: 'password', name: 'Amina Khelifi', role: 'technicien' },
+      { username: 'mehdi', password: 'password', name: 'Dr. Mehdi Larbi', role: 'medecin anesthesiste' },
+      { username: 'nadia', password: 'password', name: 'Nadia Bouzid', role: 'technicien' },
+      { username: 'rachid', password: 'password', name: 'Rachid Ferhat', role: 'technicien' },
+      { username: 'leila', password: 'password', name: 'Leila Mansouri', role: 'technicien' },
     ];
 
     for (const user of DEFAULT_TEAM) {
@@ -62,35 +50,32 @@ export const login = query({
   args: { username: v.string(), password: v.string() },
   handler: async (ctx, args) => {
     const normalizedUsername = args.username.trim().toLowerCase();
-    
-    // Search for user
     const users = await ctx.db.query("users").collect();
-    const user = users.find(u => u.username.toLowerCase() === normalizedUsername && u.password === args.password);
-    
-    return user || null;
+    const user = users.find(u => u.username.toLowerCase() === normalizedUsername);
+    if (!user) return null;
+
+    if (user.password !== args.password) return null;
+
+    const { password, ...safeUser } = user;
+    return safeUser;
   },
 });
 
 export const list = query({
   args: {},
   handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    return users.map(({ password, ...rest }) => rest);
+  },
+});
+
+export const getForAuth = internalQuery({
+  args: {},
+  handler: async (ctx) => {
     return await ctx.db.query("users").collect();
   },
 });
 
-export const updateStatus = mutation({
-  args: {
-    userId: v.id("users"),
-    status: v.string(), // "present", "pause", "absent"
-    since: v.union(v.number(), v.null()),
-    duration: v.union(v.number(), v.null()),
-    reason: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const { userId, ...updates } = args;
-    await ctx.db.patch(userId, updates);
-  },
-});
 export const create = mutation({
   args: {
     username: v.string(),
@@ -113,11 +98,6 @@ export const create = mutation({
       password: args.password,
       name: args.name,
       role: args.role,
-      status: 'present',
-      since: null,
-      duration: null,
-      reason: '',
-      lastSeen: Date.now(),
     });
 
     return userId;
@@ -130,7 +110,6 @@ export const savePushSubscription = mutation({
     subscription: v.any(),
   },
   handler: async (ctx, args) => {
-    // Check if subscription already exists for this user and endpoint
     const existing = await ctx.db
       .query("pushSubscriptions")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -141,7 +120,6 @@ export const savePushSubscription = mutation({
     );
 
     if (existingSub) {
-      // The keys might have changed even if the endpoint is the same
       await ctx.db.patch(existingSub._id, {
         subscription: args.subscription,
       });
