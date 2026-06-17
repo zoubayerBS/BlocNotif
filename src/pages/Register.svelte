@@ -250,7 +250,7 @@
     width: 72px;
     height: 72px;
     margin: 0 auto var(--space-md);
-    background: linear-gradient(135deg, var(--color-primary-glow), rgba(255,255,255,0.5));
+    background: linear-gradient(135deg, var(--color-primary-glow), var(--bg-elevated));
     color: var(--color-primary);
     border-radius: var(--radius-xl);
     display: flex;
