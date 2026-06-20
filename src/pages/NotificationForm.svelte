@@ -396,7 +396,7 @@
   .modal {
     width: 100%;
     max-height: 92vh;
-    background: #ffffff;
+    background: var(--bg-card);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     overflow-y: auto;
     animation: slideUp var(--transition-base) ease-out;
@@ -410,7 +410,7 @@
     border-bottom: 1px solid var(--border-color);
     position: sticky;
     top: 0;
-    background: #ffffff;
+    background: var(--bg-card);
     z-index: 1;
   }
 
@@ -625,13 +625,5 @@
 
   .submit-btn:not(:disabled):active {
     transform: scale(0.97);
-  }
-
-  :global([data-theme="dark"]) .modal {
-    background: rgba(30, 32, 40, 0.95);
-  }
-
-  :global([data-theme="dark"]) .modal-header {
-    background: rgba(30, 32, 40, 0.95) !important;
   }
 </style>
