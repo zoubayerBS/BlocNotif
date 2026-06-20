@@ -3,6 +3,7 @@
   import NotificationForm from './NotificationForm.svelte';
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { Bell, ShieldAlert, Wrench, Package, AlertTriangle, Info, CheckCircle2, ListFilter, UserSquare2, Syringe, Coffee, Ban, Phone, X, Megaphone } from 'lucide-svelte';
+  import { isInfoType, getResolveLabel, getResolveToast } from '../lib/notifications.js';
 
   const dispatch = createEventDispatcher();
 
@@ -31,9 +32,9 @@
     dispatch('toast', { message: 'Notification prise en charge', type: 'success' });
   }
 
-  function handleResolve(notifId) {
-    store.resolveNotification(notifId);
-    dispatch('toast', { message: 'Notification résolue', type: 'success' });
+  function handleResolve(notif) {
+    store.resolveNotification(notif._id);
+    dispatch('toast', { message: getResolveToast(notif.type), type: 'success' });
   }
 
   function handleAcknowledge(notifId) {
@@ -235,7 +236,7 @@
             <p class="notif-message">{notif.message}</p>
           {/if}
 
-          {#if (notif.type === 'Annonce' || notif.type === 'Appel Astreinte') && (notif.authorId === currentUser?._id || currentUser?.role?.includes('surveillant')) && notif.acknowledgedBy?.length > 0}
+          {#if isInfoType(notif.type) && (notif.authorId === currentUser?._id || currentUser?.role?.includes('surveillant')) && notif.acknowledgedBy?.length > 0}
             <div class="notif-divider"></div>
             <div class="acks-section">
               <span class="acks-title">Lu par ({notif.acknowledgedBy.length}) :</span>
@@ -259,82 +260,27 @@
               <span class="notif-time">{formatTime(notif.timestamp)}</span>
             </div>
 
-            {#if notif.type === 'Annonce'}
-              <div style="display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;">
-                {#if currentUser && notif.authorId === currentUser._id}
-                  <!-- Auteur : bouton Clôturer -->
-                  <button class="resolve-btn" on:click={() => handleResolve(notif._id)}>
-                    Clôturer
-                  </button>
-                {:else if currentUser && (notif.acknowledgedBy || []).some(a => a.userId === currentUser._id)}
-                  <!-- Déjà validé : badge OK/Lu -->
-                  <span class="ack-status-badge">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    OK / Lu
-                  </span>
-                {:else if currentUser}
-                  <!-- Pas encore validé : bouton OK vert -->
-                  <button class="ack-btn" on:click={() => handleAcknowledge(notif._id)}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    J'ai compris (OK)
-                  </button>
-                {/if}
-              </div>
-            {:else if notif.type === 'Appel Astreinte' && notif.targetId === currentUser?._id && !(notif.acknowledgedBy || []).some(a => a.userId === currentUser._id)}
-              <button class="ack-btn" on:click={() => handleAcknowledge(notif._id)}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                OK / Lu
-              </button>
-            {:else if notif.type === 'Appel Astreinte' && notif.targetId === currentUser?._id && (notif.acknowledgedBy || []).some(a => a.userId === currentUser._id)}
-              <span class="ack-status-badge">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                OK / Lu
-              </span>
-            {:else if notif.type === 'Appel Astreinte' && !notif.targetId && currentUser?.role?.includes('technicien') && !(notif.acknowledgedBy || []).some(a => a.userId === currentUser._id)}
-              <button class="ack-btn" on:click={() => handleAcknowledge(notif._id)}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                OK / Lu
-              </button>
-            {:else if notif.type === 'Appel Astreinte' && !notif.targetId && currentUser?.role?.includes('technicien') && (notif.acknowledgedBy || []).some(a => a.userId === currentUser._id)}
-              <span class="ack-status-badge">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                OK / Lu
-              </span>
-            {:else if notif.takenBy}
-              <div class="notif-taken">
-                <span class="taken-badge">
+            <div style="display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;">
+              {#if currentUser && notif.authorId === currentUser._id}
+                <button class="resolve-btn" on:click={() => handleResolve(notif)}>
+                  Clôturer
+                </button>
+              {:else if currentUser && (notif.acknowledgedBy || []).some(a => a.userId === currentUser._id)}
+                <span class="ack-status-badge">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="20 6 9 17 4 12"/>
                   </svg>
-                  {notif.takenByName}
+                  Pris en connaissance
                 </span>
-                {#if notif.takenBy === currentUser?._id}
-                  <button class="resolve-btn" on:click={() => handleResolve(notif._id)}>
-                    Résolu
-                  </button>
-                {/if}
-              </div>
-            {:else}
-              <button class="take-btn" on:click={() => handleTake(notif._id)}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
-                Prendre
-              </button>
-            {/if}
+              {:else if currentUser}
+                <button class="ack-btn" on:click={() => handleAcknowledge(notif._id)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  J'ai compris (OK)
+                </button>
+              {/if}
+            </div>
           </div>
         </div>
       {/each}

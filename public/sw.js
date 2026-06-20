@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blocnotif-v1';
+const CACHE_NAME = 'blocnotif-v2';
 const ASSETS = [
   '/',
   '/index.html',

@@ -19,6 +19,7 @@ export default defineSchema({
     type: v.string(),
     priority: v.string(), // "high", "medium", "low"
     message: v.string(),
+    patient: v.optional(v.string()),
     authorId: v.id("users"),
     authorName: v.string(),
     timestamp: v.number(),

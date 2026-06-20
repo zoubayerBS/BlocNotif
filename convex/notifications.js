@@ -15,6 +15,7 @@ export const create = mutation({
     type: v.string(),
     priority: v.string(),
     message: v.string(),
+    patient: v.optional(v.string()),
     authorId: v.id("users"),
     authorName: v.string(),
     targetId: v.optional(v.id("users")),
