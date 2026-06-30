@@ -172,6 +172,7 @@
         <div class="header-logo">
           <span class="logo-icon"><Hospital size={24} /></span>
           <span class="logo-text">BlocNotif</span>
+          <span class="beta-badge">BETA</span>
         </div>
       </div>
       <div class="header-right">
@@ -369,6 +370,17 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
     letter-spacing: -0.02em;
+  }
+
+  .beta-badge {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-warning-glow);
+    color: var(--color-warning);
+    border: 1px solid rgba(251, 191, 36, 0.3);
   }
 
   .header-right {

@@ -43,6 +43,7 @@
           <Hospital size={40} strokeWidth={2} />
         </div>
         <h1 class="login-title">BlocNotif</h1>
+        <span class="beta-badge">BETA</span>
         <p class="login-subtitle">Connexion à votre espace</p>
       </div>
 
@@ -205,6 +206,17 @@
     background-clip: text;
     margin-bottom: 4px;
     letter-spacing: -0.02em;
+  }
+
+  .beta-badge {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-warning-glow);
+    color: var(--color-warning);
+    border: 1px solid rgba(251, 191, 36, 0.3);
   }
 
   .login-subtitle {

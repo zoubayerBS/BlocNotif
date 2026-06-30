@@ -38,7 +38,7 @@
     "Salle non opérable",
     "Info",
     "Appel Astreinte",
-    "Annonce",
+
   ];
 
   $: isFormInvalid = !room || !type || !priority || (type === "Appel Astreinte" && !selectedRecipient);
@@ -271,7 +271,8 @@
             type="text"
             id="notif-patient"
             bind:value={patient}
-            placeholder="Ex: M. Dupont (Chambre 12)"
+            placeholder="Ex: M. Foulen (Chambre 423)"
+            autocomplete="off"
           />
         </div>
       {/if}
@@ -354,6 +355,7 @@
           bind:value={message}
           placeholder="Détails supplémentaires..."
           rows="3"
+          autocomplete="off"
         ></textarea>
       </div>
 

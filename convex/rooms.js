@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getUserFromContext, checkAbility } from "./authorization.js";
 
 export const list = query({
   args: {},
@@ -11,6 +12,9 @@ export const list = query({
 export const create = mutation({
   args: { name: v.string() },
   handler: async (ctx, args) => {
+    const user = await getUserFromContext(ctx);
+    checkAbility(user, 'manage', 'Room');
+
     // Check if room already exists
     const existing = await ctx.db
       .query("rooms")
@@ -28,6 +32,8 @@ export const create = mutation({
 export const remove = mutation({
   args: { id: v.id("rooms") },
   handler: async (ctx, args) => {
+    const user = await getUserFromContext(ctx);
+    checkAbility(user, 'manage', 'Room');
     await ctx.db.delete(args.id);
   },
 });

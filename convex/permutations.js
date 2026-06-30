@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getUserFromContext, checkAbility } from "./authorization.js";
 
 export const list = query({
   args: {},
@@ -38,6 +39,8 @@ export const decide = mutation({
     decidedBy: v.string(),
   },
   handler: async (ctx, args) => {
+    const user = await getUserFromContext(ctx);
+    checkAbility(user, 'manage', 'Permutation');
     await ctx.db.patch(args.permId, {
       status: args.decision,
       comment: args.comment,

@@ -16,8 +16,8 @@
   let teamMembers = [...store.state.teamMembers];
   let unsubscribe;
 
-  let isSurveillant = currentUser?.role?.includes('surveillant');
-  let activeSection = isSurveillant ? 'rooms' : 'app'; // 'rooms' | 'users' | 'app'
+  let ability = store.ability;
+  let activeSection = ability.can('manage', 'Room') ? 'rooms' : 'app'; // 'rooms' | 'users' | 'app'
   
   // Room Management State
   let newRoomName = '';
@@ -50,7 +50,7 @@
       rooms = [...state.rooms];
       teamMembers = [...state.teamMembers];
       currentUser = state.currentUser;
-      isSurveillant = currentUser?.role?.includes('surveillant');
+      ability = store.ability;
     });
   });
 
@@ -83,11 +83,12 @@
   }
 
   async function handleUpdateRole(userId, currentRole) {
-    const roles = ['technicien', 'medecin anesthesiste', 'surveillant bloc'];
+    const roles = ['technicien', 'medecin anesthesiste', 'surveillant bloc', 'instrumentiste'];
     const roleLabels = {
       'technicien': 'Technicien d\'Anesthésie',
       'medecin anesthesiste': 'Médecin Anesthésiste',
-      'surveillant bloc': 'Surveillant Bloc'
+      'surveillant bloc': 'Surveillant Bloc',
+      'instrumentiste': 'Instrumentiste'
     };
     const currentIndex = roles.indexOf(currentRole);
     const nextIndex = (currentIndex + 1) % roles.length;
@@ -144,38 +145,17 @@
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
     localStorage.setItem('blocnotif_theme', darkMode ? 'dark' : 'light');
   }
-
-  async function handleEnableNotifications() {
-    if (!('Notification' in window)) {
-      dispatch('toast', { message: 'Notifications non supportées (HTTPS requis)', type: 'error' });
-      return;
-    }
-    
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        dispatch('toast', { message: 'Abonnement en cours...', type: 'info' });
-        await store.subscribeToPush();
-        dispatch('toast', { message: 'Abonné avec succès !', type: 'success' });
-      } else {
-        dispatch('toast', { message: `Permission: ${permission}`, type: 'warning' });
-      }
-    } catch (e) {
-      console.error(e);
-      dispatch('toast', { message: e.message || 'Erreur inconnue', type: 'error' });
-    }
-  }
 </script>
 
 <div class="settings-page">
   <div class="settings-header">
-    <h1 class="page-title">{isSurveillant ? 'Administration' : 'Paramètres'}</h1>
-    <p class="page-subtitle">{isSurveillant ? "Gestion du bloc et de l'équipe" : "Gérer votre compte"}</p>
+    <h1 class="page-title">{ability.can('manage', 'User') ? 'Administration' : 'Paramètres'}</h1>
+    <p class="page-subtitle">{ability.can('manage', 'User') ? "Gestion du bloc et de l'équipe" : "Gérer votre compte"}</p>
   </div>
 
   <!-- Section Switcher -->
   <div class="section-tabs">
-    {#if isSurveillant}
+          {#if ability.can('manage', 'User')}
       <button 
         class="section-tab" 
         class:active={activeSection === 'rooms'} 
@@ -309,16 +289,7 @@
             </label>
           </div>
 
-          <button class="settings-item btn-item" on:click={handleEnableNotifications}>
-            <div class="item-icon bell-icon"><Bell size={20} /></div>
-            <div class="item-content">
-              <span class="item-label">S'abonner aux Push</span>
-              <span class="item-description">Recevoir les alertes sur cet appareil</span>
-            </div>
-            <ChevronRight size={18} class="text-muted" />
-          </button>
-          
-          {#if isSurveillant}
+          {#if ability.can('manage', 'Room')}
             <button class="settings-item btn-item" on:click={handleMigratePasswords} disabled={migratingPasswords}>
               <div class="item-icon" style="background: rgba(251, 191, 36, 0.15); color: #d97706;"><Lock size={20} /></div>
               <div class="item-content">

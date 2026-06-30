@@ -63,10 +63,10 @@
 
   function sendAstreinteAlert(type, personName = null, targetId = null) {
     const label = type === 'Technicien' ? "Technicien d'Anesthésie" : type;
-    const message = personName 
+    const message = personName
       ? `DEMANDE D'ASTREINTE : ${label} (${personName})`
       : `DEMANDE D'ASTREINTE : ${label}`;
-      
+
     store.addNotification({
       room: 'BLOC CENTRAL',
       type: 'Appel Astreinte',
@@ -124,6 +124,7 @@
   }
 
   $: currentUser = store.state.currentUser;
+  $: ability = store.ability;
 
   $: filteredNotifications = (filter === 'all'
       ? notifications.filter(n => !n.resolved)
@@ -172,7 +173,7 @@
     </button>
   </div>
 
-  {#if currentUser?.role?.includes('surveillant')}
+  {#if ability.can('manage', 'Notification')}
     <div class="quick-actions-section">
       <h3 class="section-title">Appel Astreintes</h3>
       <div class="quick-actions-grid">
@@ -207,7 +208,7 @@
             <div class="type-icon-wrapper {getPriorityClass(notif.priority)}">
               <svelte:component this={getTypeIcon(notif.type)} size={22} />
             </div>
-            
+
             <div class="notif-titles">
               <div class="notif-title-row">
                 <span class="type-label">{notif.type}</span>
@@ -220,7 +221,7 @@
                   <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                   <polyline points="9 22 9 12 15 12 15 22"/>
                 </svg>
-                Salle {notif.room}
+                 {notif.room}
                 {#if notif.patient}
                   <span class="meta-dot">•</span>
                   <span class="notif-patient">
@@ -236,7 +237,7 @@
             <p class="notif-message">{notif.message}</p>
           {/if}
 
-          {#if isInfoType(notif.type) && (notif.authorId === currentUser?._id || currentUser?.role?.includes('surveillant')) && notif.acknowledgedBy?.length > 0}
+          {#if isInfoType(notif.type) && (notif.authorId === currentUser?._id || ability.can('manage', 'Notification')) && notif.acknowledgedBy?.length > 0}
             <div class="notif-divider"></div>
             <div class="acks-section">
               <span class="acks-title">Lu par ({notif.acknowledgedBy.length}) :</span>
@@ -325,12 +326,12 @@
                 <Phone size={18} class="call-icon" />
               </button>
             {/each}
-            
+
             {#if iades.length === 0}
               <p class="empty-msg">Aucun IADE enregistré dans l'équipe.</p>
             {/if}
           </div>
-          
+
           <button class="btn-generic" on:click={() => sendAstreinteAlert('Technicien')}>
             Appel général Technicien (sans nom)
           </button>
@@ -362,12 +363,12 @@
                 <Phone size={18} class="call-icon" />
               </button>
             {/each}
-            
+
             {#if mars.length === 0}
               <p class="empty-msg">Aucun MAR enregistré dans l'équipe.</p>
             {/if}
           </div>
-          
+
           <button class="btn-generic" on:click={() => sendAstreinteAlert('MAR')}>
             Appel général MAR (sans nom)
           </button>

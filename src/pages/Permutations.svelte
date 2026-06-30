@@ -37,11 +37,11 @@
     if (unsubscribe) unsubscribe();
   });
 
-  $: isSurveillant = currentUser?.role?.includes('surveillant');
+  $: ability = store.ability;
 
   $: pendingPerms = permutations.filter(p => p.status === 'pending');
   $: myPerms = permutations.filter(p => p.requesterId === currentUser?._id || p.targetId === currentUser?._id);
-  $: otherTechnicians = teamMembers.filter(m => m._id !== currentUser?._id && m.role === 'technicien');
+  $: otherTechnicians = teamMembers.filter(m => m._id !== currentUser?._id && (m.role === 'technicien' || m.role === 'instrumentiste'));
 
   function handleSubmit() {
     if (!targetId || !slotA || !slotB) return;
@@ -127,15 +127,15 @@
   <div class="page-header">
     <h1 class="page-title">
       <span class="title-icon"><ArrowRightLeft size={28} /></span>
-      {isSurveillant ? 'Gestion des échanges' : 'Échanges de créneaux'}
+      {ability.can('manage', 'Permutation') ? 'Gestion des échanges' : 'Échanges de créneaux'}
     </h1>
-    {#if isSurveillant && pendingPerms.length > 0}
+    {#if ability.can('manage', 'Permutation') && pendingPerms.length > 0}
       <span class="pending-badge">{pendingPerms.length} en attente</span>
     {/if}
   </div>
 
   <!-- Surveillant View: Pending Requests -->
-  {#if isSurveillant}
+  {#if ability.can('manage', 'Permutation')}
     {#if pendingPerms.length > 0}
       <div class="section">
         <h3 class="section-title" style="display: inline-flex; align-items: center; gap: 6px;"><Clock size={16} /> Demandes en attente</h3>

@@ -1,5 +1,6 @@
 import { convex, httpClient } from './convex.js';
 import { api } from '../../convex/_generated/api.js';
+import { defineAbilitiesFor } from './abilities.js';
 
 const SESSION_KEY = 'blocnotif_session';
 
@@ -14,12 +15,14 @@ class Store {
     };
     this._listeners = new Map();
     this._eventListeners = new Map();
+    this._ability = defineAbilitiesFor(null);
 
     // Load local session
     try {
       const raw = localStorage.getItem(SESSION_KEY);
       if (raw) {
         this._state.currentUser = JSON.parse(raw);
+        this._ability = defineAbilitiesFor(this._state.currentUser?.role);
         // Try to resubscribe to push if already permission granted
         if (Notification.permission === 'granted') {
           this.subscribeToPush();
@@ -35,6 +38,7 @@ class Store {
         const freshUser = users.find(u => u._id === this._state.currentUser._id);
         if (freshUser) {
           this._state.currentUser = { ...freshUser };
+          this._ability = defineAbilitiesFor(freshUser.role);
           localStorage.setItem(SESSION_KEY, JSON.stringify(freshUser));
         }
       }
@@ -71,6 +75,10 @@ class Store {
 
   get state() {
     return this._state;
+  }
+
+  get ability() {
+    return this._ability;
   }
 
   subscribe(key, callback) {
@@ -191,6 +199,7 @@ class Store {
       const user = await httpClient.action(api.auth.login, { username, password });
       if (user) {
         this._state.currentUser = { ...user };
+        this._ability = defineAbilitiesFor(user.role);
         localStorage.setItem(SESSION_KEY, JSON.stringify(user));
         
         if (permissionPromise) {
@@ -239,6 +248,7 @@ class Store {
 
   logout() {
     this._state.currentUser = null;
+    this._ability = defineAbilitiesFor(null);
     localStorage.removeItem(SESSION_KEY);
     
     

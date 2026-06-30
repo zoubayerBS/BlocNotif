@@ -11,9 +11,7 @@
   let unsubscribe;
 
   onMount(() => {
-    // Initial values
     updateCounts(store.state);
-    
     unsubscribe = store.subscribe('bottomnav', (state) => {
       updateCounts(state);
     });
@@ -25,14 +23,12 @@
 
   function updateCounts(state) {
     notifCount = state.notifications.filter(n => !n.takenBy && !n.resolved).length;
-    if (state.currentUser?.role?.includes('surveillant')) {
+    if (store.ability.can('manage', 'Permutation')) {
       pendingCount = state.permutations.filter(p => p.status === 'pending').length;
     } else {
       pendingCount = 0;
     }
   }
-
-  let currentUser = store.state.currentUser;
 
   $: tabs = [
     { id: 'notifications', label: 'Alertes', icon: 'bell' },

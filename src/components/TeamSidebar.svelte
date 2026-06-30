@@ -19,7 +19,7 @@
   });
 
   function getInitials(name) {
-    return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    return name.split(' ').map(w => w[0]).join('').slice(0, 1).toUpperCase();
   }
 
   function handleBackdropClick(e) {
@@ -54,8 +54,9 @@
         {#each members as member}
           <div class="member-card">
             <div class="member-avatar" style="background: {
-              member.role === 'surveillant bloc' ? 'linear-gradient(135deg, var(--color-accent), #00b3ad)' : 
-              member.role === 'medecin anesthesiste' ? 'linear-gradient(135deg, #a29bfe, #6c5ce7)' : 
+              member.role === 'surveillant bloc' ? 'linear-gradient(135deg, var(--color-accent), #00b3ad)' :
+              member.role === 'medecin anesthesiste' ? 'linear-gradient(135deg, #a29bfe, #6c5ce7)' :
+              member.role === 'instrumentiste' ? 'linear-gradient(135deg, #fd79a8, #e84393)' :
               'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))'
             }">
               {getInitials(member.name)}
@@ -67,6 +68,8 @@
                   <span class="role-badge badge-surveillant">Surveillant</span>
                 {:else if member.role === 'medecin anesthesiste'}
                   <span class="role-badge badge-medecin">Médecin</span>
+                {:else if member.role === 'instrumentiste'}
+                  <span class="role-badge badge-instrumentiste">Instrumentiste</span>
                 {/if}
               </span>
             </div>
@@ -194,5 +197,10 @@
   .badge-medecin {
     background: rgba(108, 92, 231, 0.15);
     color: #6c5ce7;
+  }
+
+  .badge-instrumentiste {
+    background: rgba(232, 67, 147, 0.15);
+    color: #e84393;
   }
 </style>

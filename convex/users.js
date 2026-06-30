@@ -1,9 +1,12 @@
 import { query, internalQuery, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getUserFromContext, checkAbility, validateRole } from "./authorization.js";
 
 export const remove = mutation({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
+    const user = await getUserFromContext(ctx);
+    checkAbility(user, 'manage', 'User');
     await ctx.db.delete(args.id);
   },
 });
@@ -11,6 +14,9 @@ export const remove = mutation({
 export const updateRole = mutation({
   args: { id: v.id("users"), role: v.string() },
   handler: async (ctx, args) => {
+    const user = await getUserFromContext(ctx);
+    checkAbility(user, 'manage', 'User');
+    validateRole(args.role);
     await ctx.db.patch(args.id, { role: args.role });
   },
 });
@@ -84,6 +90,8 @@ export const create = mutation({
     role: v.string(),
   },
   handler: async (ctx, args) => {
+    validateRole(args.role);
+
     const existing = await ctx.db
       .query("users")
       .filter((q) => q.eq(q.field("username"), args.username.toLowerCase()))
