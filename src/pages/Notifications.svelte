@@ -13,6 +13,7 @@
   let showIadeSelect = false;
   let showMarSelect = false;
   let filter = 'all'; // all | haute | moyenne | basse
+  let searchQuery = '';
   let unsubscribe;
 
   onMount(() => {
@@ -130,6 +131,15 @@
       ? notifications.filter(n => !n.resolved)
       : notifications.filter(n => !n.resolved && n.priority === filter)
   ).filter(n => {
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const match = n.type.toLowerCase().includes(q)
+        || n.message.toLowerCase().includes(q)
+        || n.room.toLowerCase().includes(q)
+        || n.authorName.toLowerCase().includes(q)
+        || (n.patient && n.patient.toLowerCase().includes(q));
+      if (!match) return false;
+    }
     if (n.type === 'Appel Astreinte') {
       if (n.targetId) {
         return n.targetId === currentUser?._id || n.authorId === currentUser?._id;
@@ -171,6 +181,25 @@
     <button class="filter-chip priority-low" style="display: inline-flex; align-items: center; gap: 4px;" class:active={filter === 'basse'} on:click={() => filter = 'basse'}>
       <Info size={16} /> Basse
     </button>
+  </div>
+
+  <!-- Search -->
+  <div class="search-wrapper">
+    <svg style="position:absolute;left:14px;pointer-events:none;color:#6b7280;z-index:2;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <path d="m21 21-4.3-4.3"/>
+    </svg>
+    <input
+      type="text"
+      class="search-input"
+      placeholder="Rechercher une alerte..."
+      bind:value={searchQuery}
+    />
+    {#if searchQuery}
+      <button class="search-clear" on:click={() => searchQuery = ''}>
+        <X size={16} />
+      </button>
+    {/if}
   </div>
 
   {#if ability.can('manage', 'Notification')}
@@ -443,6 +472,55 @@
     background: var(--color-primary);
     color: white;
     box-shadow: 0 4px 12px var(--color-primary-glow);
+  }
+
+  /* Search */
+  .search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-lg);
+    color: var(--text-muted);
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 12px 40px 12px 42px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border-color);
+    background: var(--bg-surface);
+    font-size: var(--fs-sm);
+    color: var(--text-primary);
+    outline: none;
+    transition: all var(--transition-fast);
+    position: relative;
+    z-index: 1;
+  }
+
+  .search-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .search-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-glow);
+  }
+
+  .search-clear {
+    position: absolute;
+    right: 10px;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    background: var(--bg-elevated);
+  }
+
+  .search-clear:active {
+    transform: scale(0.9);
   }
 
   /* Quick Actions */
