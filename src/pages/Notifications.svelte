@@ -140,21 +140,21 @@
         || (n.patient && n.patient.toLowerCase().includes(q));
       if (!match) return false;
     }
-    if (n.type === 'Appel Astreinte') {
-      if (n.targetId) {
-        return n.targetId === currentUser?._id || n.authorId === currentUser?._id;
-      }
-      // General call without a specific targetId
-      const role = currentUser?.role || '';
-      if (n.message.includes("Technicien") || n.message.includes("IADE")) {
-        return role.includes("technicien") || n.authorId === currentUser?._id;
-      }
-      if (n.message.includes("MAR")) {
-        return role.includes("medecin anesthesiste") || n.authorId === currentUser?._id;
-      }
-      return true;
+
+    // Role-based visibility
+    const userRole = currentUser?.role || '';
+    if (userRole === 'surveillant bloc') return true;
+
+    const author = teamMembers.find(m => m._id === n.authorId);
+    const authorRole = author?.role || '';
+
+    if (userRole === 'instrumentiste') {
+      return authorRole === 'instrumentiste';
     }
-    return true;
+
+    // technicien, medecin anesthesiste -> see technicien + medecin anesthesiste
+    return authorRole === 'technicien' || authorRole === 'medecin anesthesiste';
+
   });
 </script>
 
