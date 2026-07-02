@@ -67,6 +67,15 @@ class Store {
       this._state.rooms = rooms;
       this._notifyAll();
     });
+
+    // Listen for Service Worker messages (notification events)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data?.type === 'LOG_NOTIF_EVENT') {
+          this.logNotificationEvent(event.data.notifId, event.data.event);
+        }
+      });
+    }
     
     // Seed database if empty (fire and forget)
     httpClient.mutation(api.users.seedTeam, {}).catch(console.error);
@@ -374,6 +383,18 @@ class Store {
         decidedBy: this._state.currentUser.name,
       });
     } catch (e) { console.error(e); }
+  }
+
+  async logNotificationEvent(notifId, event) {
+    try {
+      await httpClient.mutation(api.notificationLogs.log, {
+        notifId,
+        event,
+        userId: this._state.currentUser?._id,
+        userName: this._state.currentUser?.name,
+        deviceInfo: navigator.userAgent,
+      });
+    } catch (e) { console.error('Failed to log notification event:', e); }
   }
 
   // Reset

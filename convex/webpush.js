@@ -8,7 +8,8 @@ export const sendPush = internalAction({
   args: {
     title: v.string(),
     message: v.string(),
-    subscriptions: v.array(v.any()), // Array of PushSubscription objects
+    subscriptions: v.array(v.any()),
+    notifId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const VAPID_PUBLIC_KEY = process.env.VITE_VAPID_PUBLIC_KEY;
@@ -30,9 +31,10 @@ export const sendPush = internalAction({
       title: args.title,
       body: args.message,
       icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png", // Safari might ignore this, but just in case
+      badge: "/icons/icon-192.png",
       data: {
-        url: "/", // URL to open when notification is clicked
+        url: "/",
+        notifId: args.notifId || null,
       }
     });
 

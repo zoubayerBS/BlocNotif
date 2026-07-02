@@ -1,7 +1,7 @@
 <script>
   import { 
     Settings, Users, Bell, Shield, LogOut, ChevronRight, UserPlus, 
-    Home, Trash2, Plus, Edit2, Check, X, ShieldAlert, ShieldCheck,     Lock, Moon, Sun
+    Home, Trash2, Plus, Edit2, Check, X, ShieldAlert, ShieldCheck, Lock, Moon, Sun, ScrollText
   } from 'lucide-svelte';
   import { store } from '../lib/store.js';
   import { httpClient } from '../lib/convex.js';
@@ -17,13 +17,15 @@
   let unsubscribe;
 
   let ability = store.ability;
-  let activeSection = ability.can('manage', 'Room') ? 'rooms' : 'app'; // 'rooms' | 'users' | 'app'
+  let activeSection = ability.can('manage', 'Room') ? 'rooms' : 'app'; // 'rooms' | 'users' | 'audit' | 'app'
   
   // Room Management State
   let newRoomName = '';
   let isAddingRoom = false;
   let migratingPasswords = false;
   let darkMode = false;
+  let auditLogs = [];
+  let loadingAudit = false;
 
   // Confirmation Modal State
   let showConfirm = false;
@@ -145,6 +147,48 @@
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
     localStorage.setItem('blocnotif_theme', darkMode ? 'dark' : 'light');
   }
+
+  async function loadAuditLogs() {
+    loadingAudit = true;
+    try {
+      auditLogs = await httpClient.query(api.notificationLogs.getAuditLog);
+    } catch (e) {
+      console.error('Failed to load audit logs:', e);
+    } finally {
+      loadingAudit = false;
+    }
+  }
+
+  function formatLogTime(timestamp) {
+    return new Date(timestamp).toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  }
+
+  function getEventLabel(event) {
+    const labels = {
+      sent: 'Envoyée',
+      delivered: 'Livrée',
+      clicked: 'Cliquée',
+      acknowledged: 'Acquittée',
+    };
+    return labels[event] || event;
+  }
+
+  function getEventColor(event) {
+    const colors = {
+      sent: '#6366f1',
+      delivered: '#f59e0b',
+      clicked: '#3b82f6',
+      acknowledged: '#10b981',
+    };
+    return colors[event] || '#6b7280';
+  }
 </script>
 
 <div class="settings-page">
@@ -169,6 +213,15 @@
         on:click={() => activeSection = 'users'}
       >
         <Users size={18} /> Équipe
+      </button>
+    {/if}
+    {#if ability.can('manage', 'User')}
+      <button 
+        class="section-tab" 
+        class:active={activeSection === 'audit'} 
+        on:click={() => { activeSection = 'audit'; loadAuditLogs(); }}
+      >
+        <ScrollText size={18} /> Audit
       </button>
     {/if}
     <button 
@@ -257,6 +310,44 @@
             </div>
           {/each}
         </div>
+      </div>
+
+    {:else if activeSection === 'audit'}
+      <div class="admin-section">
+        <div class="section-header">
+          <h2 class="section-title">Journal d'audit des notifications</h2>
+          <button class="add-btn" on:click={loadAuditLogs}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+          </button>
+        </div>
+
+        {#if loadingAudit}
+          <div class="empty-state">
+            <p>Chargement...</p>
+          </div>
+        {:else if auditLogs.length === 0}
+          <div class="empty-state">
+            <p>Aucun log d'audit</p>
+          </div>
+        {:else}
+          <div class="audit-list">
+            {#each auditLogs.slice(0, 100) as log}
+              <div class="audit-item">
+                <div class="audit-event" style="color: {getEventColor(log.event)}">
+                  {getEventLabel(log.event)}
+                </div>
+                <div class="audit-info">
+                  <span class="audit-notif">{log.notifType} - Salle {log.notifRoom}</span>
+                  <span class="audit-meta">
+                    {#if log.userName}{log.userName} · {/if}{log.authorName} · {formatLogTime(log._creationTime)}
+                  </span>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
       </div>
 
     {:else if activeSection === 'app'}
@@ -580,5 +671,59 @@
   @keyframes slideDown {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Audit Log */
+  .audit-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .audit-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    background: var(--bg-card);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-color);
+  }
+
+  .audit-event {
+    font-size: var(--fs-xs);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    background: var(--bg-elevated);
+    white-space: nowrap;
+  }
+
+  .audit-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .audit-notif {
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .audit-meta {
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: var(--space-2xl);
+    color: var(--text-muted);
   }
 </style>

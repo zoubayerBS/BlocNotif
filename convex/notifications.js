@@ -83,7 +83,26 @@ export const create = mutation({
         title: pushTitle,
         message: pushMessage,
         subscriptions,
+        notifId: newNotifId,
       });
+
+      // Log "sent" for each targeted user
+      const targetedUserIds = new Set();
+      if (args.targetId) {
+        targetedUserIds.add(args.targetId);
+      } else {
+        const users = await ctx.db.query("users").collect();
+        for (const u of users) {
+          targetedUserIds.add(u._id);
+        }
+      }
+      for (const uid of targetedUserIds) {
+        await ctx.db.insert("notificationLogs", {
+          notifId: newNotifId,
+          event: "sent",
+          userId: uid,
+        });
+      }
     }
 
     return newNotifId;
@@ -146,6 +165,14 @@ export const acknowledge = mutation({
 
     await ctx.db.patch(args.notifId, {
       acknowledgedBy: updatedAck,
+    });
+
+    // Log acknowledged event
+    await ctx.db.insert("notificationLogs", {
+      notifId: args.notifId,
+      event: "acknowledged",
+      userId: args.userId,
+      userName: args.userName,
     });
   },
 });

@@ -38,26 +38,44 @@ self.addEventListener('push', (event) => {
     event.waitUntil(
       self.registration.showNotification(data.title, options)
     );
+
+    // Notify client to log "delivered" event
+    if (data.data?.notifId) {
+      notifyClients({ type: 'LOG_NOTIF_EVENT', notifId: data.data.notifId, event: 'delivered' });
+    }
   }
 });
 
 self.addEventListener('notificationclick', (event) => {
+  const notifId = event.notification.data?.notifId;
   event.notification.close();
+
+  // Notify client to log "clicked" event
+  if (notifId) {
+    notifyClients({ type: 'LOG_NOTIF_EVENT', notifId, event: 'clicked' });
+  }
+
   const urlToOpen = event.notification.data?.url || '/';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Check if there is already a window/tab open with the target URL
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
         if (client.url === urlToOpen && 'focus' in client) {
           return client.focus();
         }
       }
-      // If not, open a new window/tab
       if (self.clients.openWindow) {
         return self.clients.openWindow(urlToOpen);
       }
     })
   );
 });
+
+function notifyClients(message) {
+  self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    for (const client of clients) {
+      client.postMessage(message);
+    }
+  });
+}

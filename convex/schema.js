@@ -69,6 +69,14 @@ export default defineSchema({
 
   pushSubscriptions: defineTable({
     userId: v.id("users"),
-    subscription: v.any(), // Store the raw PushSubscription object
+    subscription: v.any(),
   }).index("by_userId", ["userId"]),
+
+  notificationLogs: defineTable({
+    notifId: v.id("notifications"),
+    event: v.string(), // "sent" | "delivered" | "clicked" | "acknowledged"
+    userId: v.optional(v.union(v.id("users"), v.null())),
+    userName: v.optional(v.string()),
+    deviceInfo: v.optional(v.string()),
+  }).index("by_notifId", ["notifId"]),
 });
