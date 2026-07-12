@@ -14,10 +14,15 @@
   let message = "";
   let selectedRecipient = null;
   let recipientDropdownOpen = false;
+  let audience = "all";
+  let audienceDropdownOpen = false;
 
   let rooms = [...store.state.rooms];
   let teamMembers = [...store.state.teamMembers];
   let unsubscribe;
+
+  const currentUser = store.state.currentUser;
+  const isSurveillant = store.ability.can('manage', 'Notification');
 
   onMount(() => {
     unsubscribe = store.subscribe("notif-form", (state) => {
@@ -29,16 +34,25 @@
   onDestroy(() => {
     if (unsubscribe) unsubscribe();
   });
+
   const types = [
     "Urgence",
-    "Préparation matériel",
-    "Protocole anesthésique",
-    "Manque matériel",
-    "Équipement hors service",
-    "Salle non opérable",
+    "Annonce",
+    "Preparation materiel",
+    "Protocole anesthesique",
+    "Manque materiel",
+    "Equipement hors service",
+    "Salle non operable",
     "Info",
     "Appel Astreinte",
+  ];
 
+  const audiences = [
+    { value: "all", label: "Tout le monde" },
+    { value: "techniciens", label: "Techniciens" },
+    { value: "medecins", label: "Medecins Anesthesistes" },
+    { value: "instrumentistes", label: "Instrumentistes" },
+    { value: "tech_marc", label: "Techniciens + Medecins" },
   ];
 
   $: isFormInvalid = !room || !type || !priority || (type === "Appel Astreinte" && !selectedRecipient);
@@ -46,7 +60,7 @@
   function handleSubmit(e) {
     e.preventDefault();
     if (isFormInvalid) return;
-    dispatch("submit", { room, type, priority, patient, message, targetId: selectedRecipient?._id });
+    dispatch("submit", { room, type, priority, patient, message, targetId: selectedRecipient?._id, audience });
   }
 
   function handleBackdrop(e) {
@@ -62,9 +76,12 @@
     if (recipientDropdownOpen && !e.target.closest("#recipient-dropdown-container")) {
       recipientDropdownOpen = false;
     }
+    if (audienceDropdownOpen && !e.target.closest("#audience-dropdown-container")) {
+      audienceDropdownOpen = false;
+    }
   }
 
-  $: if (type !== "Protocole anesthésique") {
+  $: if (type !== "Protocole anesthesique") {
     patient = "";
   }
   $: if (type !== "Appel Astreinte") {
@@ -222,7 +239,7 @@
 
       <!-- Priority -->
       <div class="form-group">
-        <div class="form-label" id="priority-label">Priorité</div>
+        <div class="form-label" id="priority-label">Priorite</div>
         <div
           class="priority-selector"
           role="group"
@@ -257,6 +274,68 @@
           </button>
         </div>
       </div>
+
+      <!-- Audience (surveillant only) -->
+      {#if isSurveillant && type !== "Appel Astreinte"}
+        <div class="form-group relative" id="audience-dropdown-container">
+          <div class="form-label" id="audience-label">Public cible</div>
+          <button
+            type="button"
+            class="custom-select-trigger"
+            class:open={audienceDropdownOpen}
+            on:click={() => (audienceDropdownOpen = !audienceDropdownOpen)}
+            aria-labelledby="audience-label"
+          >
+            {audiences.find(a => a.value === audience)?.label || "Choisir..."}
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="chevron"
+              class:rotate={audienceDropdownOpen}
+            >
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+
+          {#if audienceDropdownOpen}
+            <div class="custom-select-dropdown">
+              {#each audiences as a}
+                <button
+                  type="button"
+                  class="custom-select-option"
+                  class:selected={audience === a.value}
+                  on:click={() => {
+                    audience = a.value;
+                    audienceDropdownOpen = false;
+                  }}
+                >
+                  {a.label}
+                  {#if audience === a.value}
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  {/if}
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/if}
 
       <!-- Patient -->
       {#if type === "Protocole anesthésique"}

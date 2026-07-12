@@ -17,13 +17,14 @@ export default defineSchema({
   notifications: defineTable({
     room: v.string(),
     type: v.string(),
-    priority: v.string(), // "high", "medium", "low"
+    priority: v.string(),
     message: v.string(),
     patient: v.optional(v.string()),
     authorId: v.id("users"),
     authorName: v.string(),
     timestamp: v.number(),
     targetId: v.optional(v.union(v.id("users"), v.null())),
+    audience: v.optional(v.string()), // "all" | "techniciens" | "medecins" | "instrumentistes" | "tech_marc"
     takenBy: v.union(v.id("users"), v.null()),
     takenByName: v.union(v.string(), v.null()),
     takenAt: v.union(v.number(), v.null()),

@@ -19,11 +19,13 @@ export const create = mutation({
     authorId: v.id("users"),
     authorName: v.string(),
     targetId: v.optional(v.id("users")),
+    audience: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const newNotifId = await ctx.db.insert("notifications", {
       ...args,
       targetId: args.targetId || null,
+      audience: args.audience || 'all',
       timestamp: Date.now(),
       takenBy: null,
       takenByName: null,
@@ -32,50 +34,45 @@ export const create = mutation({
       acknowledgedBy: [],
     });
 
-    // Custom push notification content for urgent alerts
     let pushTitle = `${args.type} - Salle ${args.room}`;
     let pushMessage = args.message || `Alerte ${args.priority} en salle ${args.room}`;
 
     if (args.type === 'Appel Astreinte') {
-      pushTitle = `🚨 RAPPEL ASTREINTE - BLOC`;
-      pushMessage = args.message ? `⚠️ Astreinte : ${args.message}` : `⚠️ Vous êtes appelé à l'astreinte immédiatement au Bloc Central.`;
+      pushTitle = `RAPPEL ASTREINTE - BLOC`;
+      pushMessage = args.message ? `Astreinte : ${args.message}` : `Vous etes appele a l'astreinte immediatement au Bloc Central.`;
     }
 
-    // Send push notification via Web Push
-    let subscriptions = [];
+    // Determine target users based on audience or targetId
+    let targetUserIds = [];
+    const allUsers = await ctx.db.query("users").collect();
+
     if (args.targetId) {
-      const userSubs = await ctx.db
-        .query("pushSubscriptions")
-        .withIndex("by_userId", (q) => q.eq("userId", args.targetId))
-        .collect();
-      subscriptions = userSubs.map(s => s.subscription);
+      targetUserIds = [args.targetId];
     } else if (args.type === 'Appel Astreinte') {
-      // General astreinte call. Target users with the specific role:
       let targetRole = null;
       if (args.message.includes("Technicien") || args.message.includes("IADE")) {
         targetRole = "technicien";
       } else if (args.message.includes("MAR")) {
         targetRole = "medecin anesthesiste";
       }
-
       if (targetRole) {
-        const users = await ctx.db.query("users").collect();
-        const targetUserIds = users.filter(u => u.role === targetRole).map(u => u._id);
-        
-        for (const uid of targetUserIds) {
-          const userSubs = await ctx.db
-            .query("pushSubscriptions")
-            .withIndex("by_userId", (q) => q.eq("userId", uid))
-            .collect();
-          subscriptions.push(...userSubs.map(s => s.subscription));
-        }
+        targetUserIds = allUsers.filter(u => u.role === targetRole).map(u => u._id);
       } else {
-        const allSubs = await ctx.db.query("pushSubscriptions").collect();
-        subscriptions = allSubs.map(s => s.subscription);
+        targetUserIds = allUsers.map(u => u._id);
       }
     } else {
-      const allSubs = await ctx.db.query("pushSubscriptions").collect();
-      subscriptions = allSubs.map(s => s.subscription);
+      // Use audience filter
+      targetUserIds = getAudienceUserIds(allUsers, args.audience || 'all');
+    }
+
+    // Collect subscriptions for target users
+    let subscriptions = [];
+    for (const uid of targetUserIds) {
+      const userSubs = await ctx.db
+        .query("pushSubscriptions")
+        .withIndex("by_userId", (q) => q.eq("userId", uid))
+        .collect();
+      subscriptions.push(...userSubs.map(s => s.subscription));
     }
 
     if (subscriptions.length > 0) {
@@ -87,16 +84,7 @@ export const create = mutation({
       });
 
       // Log "sent" for each targeted user
-      const targetedUserIds = new Set();
-      if (args.targetId) {
-        targetedUserIds.add(args.targetId);
-      } else {
-        const users = await ctx.db.query("users").collect();
-        for (const u of users) {
-          targetedUserIds.add(u._id);
-        }
-      }
-      for (const uid of targetedUserIds) {
+      for (const uid of targetUserIds) {
         await ctx.db.insert("notificationLogs", {
           notifId: newNotifId,
           event: "sent",
@@ -108,6 +96,21 @@ export const create = mutation({
     return newNotifId;
   },
 });
+
+function getAudienceUserIds(users, audience) {
+  switch (audience) {
+    case 'techniciens':
+      return users.filter(u => u.role === 'technicien').map(u => u._id);
+    case 'medecins':
+      return users.filter(u => u.role === 'medecin anesthesiste').map(u => u._id);
+    case 'instrumentistes':
+      return users.filter(u => u.role === 'instrumentiste').map(u => u._id);
+    case 'tech_marc':
+      return users.filter(u => u.role === 'technicien' || u.role === 'medecin anesthesiste').map(u => u._id);
+    default:
+      return users.map(u => u._id);
+  }
+}
 
 export const take = mutation({
   args: {

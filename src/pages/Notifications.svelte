@@ -127,35 +127,46 @@
   $: currentUser = store.state.currentUser;
   $: ability = store.ability;
 
-  $: filteredNotifications = (filter === 'all'
-      ? notifications.filter(n => !n.resolved)
-      : notifications.filter(n => !n.resolved && n.priority === filter)
-  ).filter(n => {
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const match = n.type.toLowerCase().includes(q)
-        || n.message.toLowerCase().includes(q)
-        || n.room.toLowerCase().includes(q)
-        || n.authorName.toLowerCase().includes(q)
-        || (n.patient && n.patient.toLowerCase().includes(q));
-      if (!match) return false;
-    }
-
-    // Role-based visibility
-    const userRole = currentUser?.role || '';
+  function canSeeNotification(notif, user) {
+    const userRole = user?.role || '';
     if (userRole === 'surveillant bloc') return true;
 
-    const author = teamMembers.find(m => m._id === n.authorId);
-    const authorRole = author?.role || '';
+    if (notif.type === 'Annonce') return true;
 
-    if (userRole === 'instrumentiste') {
-      return authorRole === 'instrumentiste';
+    if (notif.targetId && user?._id === notif.targetId) return true;
+
+    const audience = notif.audience || 'all';
+    if (audience !== 'all') {
+      if (audience === 'techniciens' && userRole !== 'technicien') return false;
+      if (audience === 'medecins' && userRole !== 'medecin anesthesiste') return false;
+      if (audience === 'instrumentistes' && userRole !== 'instrumentiste') return false;
+      if (audience === 'tech_marc' && userRole !== 'technicien' && userRole !== 'medecin anesthesiste') return false;
     }
 
-    // technicien, medecin anesthesiste -> see technicien + medecin anesthesiste
-    return authorRole === 'technicien' || authorRole === 'medecin anesthesiste';
+    return true;
+  }
 
-  });
+  function filterNotifs(allNotifs, activeFilter, query, user) {
+    let result = activeFilter === 'all'
+      ? allNotifs.filter(n => !n.resolved)
+      : allNotifs.filter(n => !n.resolved && n.priority === activeFilter);
+
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      result = result.filter(n => {
+        return n.type.toLowerCase().includes(q)
+          || n.message.toLowerCase().includes(q)
+          || n.room.toLowerCase().includes(q)
+          || n.authorName.toLowerCase().includes(q)
+          || (n.patient && n.patient.toLowerCase().includes(q));
+      });
+    }
+
+    result = result.filter(n => canSeeNotification(n, user));
+    return result;
+  }
+
+  $: filteredNotifications = filterNotifs(notifications, filter, searchQuery, currentUser);
 </script>
 
 <div class="page notifications-page">
