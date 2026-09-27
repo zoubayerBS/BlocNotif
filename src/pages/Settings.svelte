@@ -337,8 +337,12 @@
 
 <div class="settings-page">
   <div class="settings-header">
-    <h1 class="page-title">{ability.can('manage', 'User') ? 'Administration' : 'Paramètres'}</h1>
-    <p class="page-subtitle">{ability.can('manage', 'User') ? "Gestion du bloc et de l'équipe" : "Gérer votre compte"}</p>
+    <h1 class="page-title">
+      <span class="title-icon">
+        <svelte:component this={ability.can('manage', 'User') ? ShieldCheck : Settings} size={26} />
+      </span>
+      {ability.can('manage', 'User') ? 'Administration' : 'Paramètres'}
+    </h1>
   </div>
 
   <!-- Section Switcher -->
@@ -705,13 +709,7 @@
   .page-title {
     font-size: var(--fs-2xl);
     font-weight: 900;
-    color: var(--text-primary);
     letter-spacing: -0.02em;
-  }
-
-  .page-subtitle {
-    color: var(--text-secondary);
-    font-size: var(--fs-sm);
   }
 
   /* Tabs */
