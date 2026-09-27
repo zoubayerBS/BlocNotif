@@ -4,7 +4,7 @@
   import { Hospital, User, KeyRound, AlertCircle, ArrowRight, UserCircle, Briefcase, ChevronDown, CheckCircle2 } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
-  
+
   let username = '';
   let password = '';
   let name = '';
@@ -30,9 +30,9 @@
 
     loading = true;
     errorMessage = '';
-    
+
     const result = await store.register({ username, password, name, role });
-    
+
     if (result.success) {
       // Automatically login after registration
       const user = await store.loginWithUsername(username, password);
@@ -84,11 +84,11 @@
           <label for="name">Nom Complet</label>
           <div class="input-wrapper">
             <span class="input-icon"><UserCircle size={20} /></span>
-            <input 
-              type="text" 
-              id="name" 
-              bind:value={name} 
-              placeholder="Ex: Karim Benali" 
+            <input
+              type="text"
+              id="name"
+              bind:value={name}
+              placeholder="Entrez votre nom complet"
               required
             />
           </div>
@@ -98,11 +98,11 @@
           <label for="username">Identifiant (login)</label>
           <div class="input-wrapper">
             <span class="input-icon"><User size={20} /></span>
-            <input 
-              type="text" 
-              id="username" 
-              bind:value={username} 
-              placeholder="Ex: karim" 
+            <input
+              type="text"
+              id="username"
+              bind:value={username}
+              placeholder="Saisissez votre identifiant"
               required
             />
           </div>
@@ -113,8 +113,8 @@
           <div class="custom-select-wrapper" class:open={isRoleDropdownOpen}>
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <!-- svelte-ignore a11y-no-static-element-interactions -->
-            <div 
-              class="custom-select-trigger" 
+            <div
+              class="custom-select-trigger"
               on:click|stopPropagation={() => isRoleDropdownOpen = !isRoleDropdownOpen}
             >
               <span class="input-icon"><Briefcase size={20} /></span>
@@ -129,8 +129,8 @@
                 {#each roles as r}
                   <!-- svelte-ignore a11y-click-events-have-key-events -->
                   <!-- svelte-ignore a11y-no-static-element-interactions -->
-                  <div 
-                    class="custom-option" 
+                  <div
+                    class="custom-option"
                     class:selected={role === r.value}
                     on:click|stopPropagation={() => { role = r.value; isRoleDropdownOpen = false; }}
                   >
@@ -149,11 +149,11 @@
           <label for="password">Mot de passe</label>
           <div class="input-wrapper">
             <span class="input-icon"><KeyRound size={20} /></span>
-            <input 
-              type="password" 
-              id="password" 
-              bind:value={password} 
-              placeholder="••••••••" 
+            <input
+              type="password"
+              id="password"
+              bind:value={password}
+              placeholder="••••••••"
               required
             />
           </div>
@@ -164,7 +164,7 @@
           {#if !loading}<ArrowRight size={20} />{/if}
         </button>
       </form>
-      
+
       <div class="login-footer">
         <p>Déjà un compte ? <button class="link-btn" on:click={() => dispatch('switch', 'login')}>Se connecter</button></p>
       </div>

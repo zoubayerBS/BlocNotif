@@ -4,7 +4,7 @@
   import { Hospital, User, KeyRound, AlertCircle, ArrowRight } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
-  
+
   let username = '';
   let password = '';
   let animating = false;
@@ -18,7 +18,7 @@
     }
 
     const success = await store.loginWithUsername(username, password);
-    
+
     if (success) {
       errorMessage = '';
       animating = true;
@@ -59,11 +59,11 @@
           <label for="username">Identifiant</label>
           <div class="input-wrapper">
             <span class="input-icon"><User size={20} /></span>
-            <input 
-              type="text" 
-              id="username" 
-              bind:value={username} 
-              placeholder="Ex: karim" 
+            <input
+              type="text"
+              id="username"
+              bind:value={username}
+              placeholder="Saisissez votre identifiant"
               autocomplete="username"
             />
           </div>
@@ -73,11 +73,11 @@
           <label for="password">Mot de passe</label>
           <div class="input-wrapper">
             <span class="input-icon"><KeyRound size={20} /></span>
-            <input 
-              type="password" 
-              id="password" 
-              bind:value={password} 
-              placeholder="••••••••" 
+            <input
+              type="password"
+              id="password"
+              bind:value={password}
+              placeholder="••••••••"
             />
           </div>
         </div>
@@ -87,7 +87,7 @@
           <ArrowRight size={20} />
         </button>
       </form>
-      
+
       <div class="login-footer">
         <p>Demo: karim / password</p>
         <p style="margin-top: 12px;">Pas de compte ? <button class="link-btn" on:click={() => dispatch('switch', 'register')}>Créer un compte</button></p>
