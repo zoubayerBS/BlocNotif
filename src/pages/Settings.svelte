@@ -1,7 +1,7 @@
 <script>
   import { 
     Settings, Users, Bell, Shield, LogOut, ChevronRight, UserPlus, 
-    Home, Trash2, Plus, Edit2, Check, X, ShieldAlert, ShieldCheck, Lock, Moon, Sun, ScrollText
+    Home, Trash2, Plus, Edit2, Check, X, ShieldAlert, ShieldCheck, Lock, Moon, Sun, ScrollText, Phone, Database, Eye, RefreshCw
   } from 'lucide-svelte';
   import { store } from '../lib/store.js';
   import { httpClient } from '../lib/convex.js';
@@ -14,6 +14,7 @@
   let currentUser = store.state.currentUser;
   let rooms = [...store.state.rooms];
   let teamMembers = [...store.state.teamMembers];
+  let features = { ...store.state.features };
   let unsubscribe;
 
   let ability = store.ability;
@@ -52,6 +53,7 @@
       rooms = [...state.rooms];
       teamMembers = [...state.teamMembers];
       currentUser = state.currentUser;
+      features = { ...state.features };
       ability = store.ability;
     });
   });
@@ -78,8 +80,12 @@
       message: 'Êtes-vous sûr de vouloir supprimer cette salle d\'opération ?',
       type: 'danger',
       onConfirm: async () => {
-        await store.removeRoom(id);
-        dispatch('toast', { message: 'Salle supprimée', type: 'info' });
+        const result = await store.removeRoom(id);
+        if (result.success) {
+          dispatch('toast', { message: 'Salle supprimée', type: 'info' });
+        } else {
+          dispatch('toast', { message: result.error || 'Suppression impossible', type: 'error' });
+        }
       }
     });
   }
@@ -90,8 +96,11 @@
       'technicien': 'Technicien d\'Anesthésie',
       'medecin anesthesiste': 'Médecin Anesthésiste',
       'surveillant bloc': 'Surveillant Bloc',
-      'instrumentiste': 'Instrumentiste'
+      'instrumentiste': 'Instrumentiste',
+      'superuser': 'Superuser'
     };
+    // Le rôle superuser n'est cycleable que par un superuser
+    if (ability.can('manage', 'Database')) roles.push('superuser');
     const currentIndex = roles.indexOf(currentRole);
     const nextIndex = (currentIndex + 1) % roles.length;
     const nextRole = roles[nextIndex];
@@ -101,8 +110,12 @@
       message: `Passer le rôle de cet utilisateur à "${roleLabels[nextRole]}" ?`,
       type: 'info',
       onConfirm: async () => {
-        await store.updateUserRole(userId, nextRole);
-        dispatch('toast', { message: 'Rôle mis à jour', type: 'success' });
+        const result = await store.updateUserRole(userId, nextRole);
+        if (result.success) {
+          dispatch('toast', { message: 'Rôle mis à jour', type: 'success' });
+        } else {
+          dispatch('toast', { message: result.error || 'Mise à jour impossible', type: 'error' });
+        }
       }
     });
   }
@@ -113,14 +126,143 @@
       message: 'Cette action est irréversible. Supprimer ce compte ?',
       type: 'danger',
       onConfirm: async () => {
-        await store.removeUser(userId);
-        dispatch('toast', { message: 'Utilisateur supprimé', type: 'warning' });
+        const result = await store.removeUser(userId);
+        if (result.success) {
+          dispatch('toast', { message: 'Utilisateur supprimé', type: 'warning' });
+        } else {
+          dispatch('toast', { message: result.error || 'Suppression impossible', type: 'error' });
+        }
       }
     });
   }
 
+  async function toggleFeature(key, enabled) {
+    const next = { ...features, [key]: enabled };
+    const result = await store.updateFeatures(next);
+    if (result.success) {
+      features = next;
+      dispatch('toast', {
+        message: enabled ? 'Fonctionnalité activée' : 'Fonctionnalité désactivée',
+        type: 'success'
+      });
+    } else {
+      dispatch('toast', { message: result.error || 'Mise à jour impossible', type: 'error' });
+    }
+  }
+
   function handleLogout() {
     store.logout();
+  }
+
+  // --- Base de données (superuser) ---
+
+  const collections = [
+    'users', 'rooms', 'notifications', 'absences',
+    'permutations', 'pushSubscriptions', 'notificationLogs', 'settings'
+  ];
+  const collectionLabels = {
+    users: 'Utilisateurs',
+    rooms: 'Salles',
+    notifications: 'Notifications',
+    absences: 'Absences',
+    permutations: 'Permutations',
+    pushSubscriptions: 'Abonnements push',
+    notificationLogs: "Journal d'audit",
+    settings: 'Paramètres',
+  };
+
+  let dbStats = null;
+  let dbCollection = null;
+  let dbDocs = [];
+  let dbLoading = false;
+
+  async function loadDbStats() {
+    const result = await store.dbStats();
+    if (result.success) dbStats = result.data;
+    else dispatch('toast', { message: result.error || 'Lecture impossible', type: 'error' });
+  }
+
+  async function viewCollection(name) {
+    dbCollection = name;
+    dbLoading = true;
+    const result = await store.dbList(name, 100);
+    dbLoading = false;
+    if (result.success) dbDocs = result.data;
+    else dispatch('toast', { message: result.error || 'Lecture impossible', type: 'error' });
+  }
+
+  function confirmClear(name) {
+    triggerConfirm({
+      title: `Vider « ${collectionLabels[name]} »`,
+      message: 'Tous les documents de cette collection seront définitivement supprimés.',
+      type: 'danger',
+      onConfirm: async () => {
+        const result = await store.dbClearCollection(name);
+        if (result.success) {
+          dispatch('toast', { message: `${result.deleted} document(s) supprimé(s)`, type: 'warning' });
+          await loadDbStats();
+          if (dbCollection === name) await viewCollection(name);
+        } else {
+          dispatch('toast', { message: result.error || 'Purge impossible', type: 'error' });
+        }
+      }
+    });
+  }
+
+  function confirmRemoveDoc(collection, id) {
+    triggerConfirm({
+      title: 'Supprimer ce document',
+      message: `Document ${id} — action irréversible.`,
+      type: 'danger',
+      onConfirm: async () => {
+        const result = await store.dbRemoveDocument(collection, id);
+        if (result.success) {
+          dispatch('toast', { message: 'Document supprimé', type: 'warning' });
+          await loadDbStats();
+          if (dbCollection === collection) await viewCollection(collection);
+        } else {
+          dispatch('toast', { message: result.error || 'Suppression impossible', type: 'error' });
+        }
+      }
+    });
+  }
+
+  function confirmSeedDefaults() {
+    triggerConfirm({
+      title: 'Réinitialiser les données par défaut',
+      message: 'Recrée les salles et l\'équipe par défaut si elles sont manquantes (aucune donnée existante n\'est écrasée).',
+      type: 'info',
+      onConfirm: async () => {
+        const result = await store.seedDefaults();
+        if (result.success) {
+          dispatch('toast', { message: 'Données par défaut restaurées', type: 'success' });
+          await loadDbStats();
+        } else {
+          dispatch('toast', { message: result.error || 'Réinitialisation impossible', type: 'error' });
+        }
+      }
+    });
+  }
+
+  function docSummary(collection, doc) {
+    if (!doc) return '';
+    const key =
+      collection === 'users' ? `@${doc.username} • ${doc.role} (${doc.name})`
+      : collection === 'rooms' ? doc.name
+      : collection === 'notifications' ? `${doc.type} • ${doc.room} — ${String(doc.message || '').slice(0, 60)}`
+      : collection === 'absences' ? `${doc.userName} • ${doc.type} ${doc.duration ?? ''}`
+      : collection === 'permutations' ? `${doc.requesterName} ↔ ${doc.targetName} • ${doc.status}`
+      : collection === 'pushSubscriptions' ? String(doc.subscription?.endpoint || '').slice(0, 60)
+      : collection === 'notificationLogs' ? `${doc.event} • ${doc.userName || '—'}`
+      : `${doc.key || ''}`;
+    return key;
+  }
+
+  async function openDatabase() {
+    activeSection = 'database';
+    dbCollection = null;
+    dbDocs = [];
+    await loadDbStats();
   }
 
   async function handleMigratePasswords() {
@@ -182,7 +324,7 @@
 
   function getEventColor(event) {
     const colors = {
-      sent: '#6366f1',
+      sent: '#13A09F',
       delivered: '#f59e0b',
       clicked: '#3b82f6',
       acknowledged: '#10b981',
@@ -222,6 +364,15 @@
         on:click={() => { activeSection = 'audit'; loadAuditLogs(); }}
       >
         <ScrollText size={18} /> Audit
+      </button>
+    {/if}
+    {#if ability.can('manage', 'Database')}
+      <button
+        class="section-tab"
+        class:active={activeSection === 'database'}
+        on:click={openDatabase}
+      >
+        <Database size={18} /> Base de données
       </button>
     {/if}
     <button 
@@ -350,7 +501,130 @@
         {/if}
       </div>
 
+    {:else if activeSection === 'database'}
+      <div class="admin-section">
+        <div class="section-header">
+          <h2 class="section-title">Collections</h2>
+          <button class="add-btn" title="Rafraîchir" on:click={loadDbStats}>
+            <RefreshCw size={16} />
+          </button>
+        </div>
+
+        {#if !dbStats}
+          <div class="empty-state"><p>Chargement...</p></div>
+        {:else}
+          <div class="settings-list">
+            {#each collections as c}
+              <div class="settings-item">
+                <div class="item-icon" style="background: rgba(19, 160, 159, 0.15); color: #13A09F;">
+                  <Database size={20} />
+                </div>
+                <div class="item-content">
+                  <span class="item-label">{collectionLabels[c]}</span>
+                  <span class="item-description">{dbStats[c]} document(s)</span>
+                </div>
+                <div class="user-actions">
+                  <button class="item-action" title="Voir les documents" on:click={() => viewCollection(c)}>
+                    <Eye size={18} />
+                  </button>
+                  <button class="item-action delete" title="Vider la collection" on:click={() => confirmClear(c)}>
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      {#if dbCollection}
+        <div class="admin-section">
+          <div class="section-header">
+            <h2 class="section-title">{collectionLabels[dbCollection]} — {dbDocs.length} affiché(s)</h2>
+            <button class="add-btn" title="Rafraîchir" on:click={() => viewCollection(dbCollection)}>
+              <RefreshCw size={16} />
+            </button>
+          </div>
+          {#if dbLoading}
+            <div class="empty-state"><p>Chargement...</p></div>
+          {:else if dbDocs.length === 0}
+            <div class="empty-state"><p>Collection vide</p></div>
+          {:else}
+            <div class="db-docs">
+              {#each dbDocs as doc}
+                <div class="db-doc">
+                  <div class="db-doc-main">
+                    <span class="db-doc-id">{doc._id}</span>
+                    <span class="db-doc-summary">{docSummary(dbCollection, doc)}</span>
+                  </div>
+                  <button class="item-action delete" title="Supprimer" on:click={() => confirmRemoveDoc(dbCollection, doc._id)}>
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/if}
+
+      <div class="admin-section">
+        <button class="settings-item btn-item" on:click={confirmSeedDefaults}>
+          <div class="item-icon" style="background: rgba(34, 197, 94, 0.15); color: #22c55e;"><RefreshCw size={20} /></div>
+          <div class="item-content">
+            <span class="item-label">Restaurer les données par défaut</span>
+            <span class="item-description">Recrée les salles et l'équipe manquantes</span>
+          </div>
+          <ChevronRight size={18} class="text-muted" />
+        </button>
+      </div>
+
     {:else if activeSection === 'app'}
+      {#if ability.can('manage', 'Settings')}
+        <div class="admin-section">
+          <h2 class="section-title">Fonctionnalités</h2>
+          <p class="section-hint">
+            Les fonctions désactivées sont masquées pour tous les utilisateurs.
+          </p>
+          <div class="settings-list">
+            <div class="settings-item">
+              <div class="item-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                <Phone size={20} />
+              </div>
+              <div class="item-content">
+                <span class="item-label">Appel Astreinte</span>
+                <span class="item-description">Bouton « Astreinte Technicien » et type « Appel Astreinte »</span>
+              </div>
+              <label class="switch">
+                <input
+                  type="checkbox"
+                  checked={features.appelAstreinte}
+                  on:change={(e) => toggleFeature('appelAstreinte', e.target.checked)}
+                >
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="settings-item">
+              <div class="item-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                <Phone size={20} />
+              </div>
+              <div class="item-content">
+                <span class="item-label">Appel MAR</span>
+                <span class="item-description">Bouton « Astreinte MAR » et choix du MAR à appeler</span>
+              </div>
+              <label class="switch">
+                <input
+                  type="checkbox"
+                  checked={features.appelMar}
+                  on:change={(e) => toggleFeature('appelMar', e.target.checked)}
+                >
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      {/if}
+
       <div class="admin-section">
         <h2 class="section-title">Paramètres Application</h2>
         <div class="settings-list">
@@ -367,7 +641,7 @@
           </div>
 
           <div class="settings-item">
-            <div class="item-icon" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">
+            <div class="item-icon" style="background: rgba(19, 160, 159, 0.15); color: #13A09F;">
               {#if darkMode}<Moon size={20} />{:else}<Sun size={20} />{/if}
             </div>
             <div class="item-content">
@@ -446,10 +720,20 @@
     padding: 4px;
     border-radius: var(--radius-lg);
     margin-bottom: var(--space-xl);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .section-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .section-tab {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: max-content;
+    white-space: nowrap;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -491,6 +775,54 @@
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+  }
+
+  .section-hint {
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    padding: 0 var(--space-xs);
+    margin-top: calc(var(--space-xs) * -1);
+  }
+
+  .db-docs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .db-doc {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-md);
+  }
+
+  .db-doc-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .db-doc-id {
+    font-family: monospace;
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .db-doc-summary {
+    font-size: var(--fs-sm);
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .add-btn {

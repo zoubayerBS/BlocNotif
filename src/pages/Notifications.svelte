@@ -9,6 +9,7 @@
 
   let notifications = [...store.state.notifications];
   let teamMembers = [...store.state.teamMembers];
+  let features = { ...store.state.features };
   let showForm = false;
   let showIadeSelect = false;
   let showMarSelect = false;
@@ -20,6 +21,7 @@
     unsubscribe = store.subscribe('notifications-page', (state) => {
       notifications = [...state.notifications];
       teamMembers = [...state.teamMembers];
+      features = { ...state.features };
     });
   });
 
@@ -213,18 +215,22 @@
     {/if}
   </div>
 
-  {#if ability.can('manage', 'Notification')}
+  {#if ability.can('manage', 'Notification') && (features.appelAstreinte || features.appelMar)}
     <div class="quick-actions-section">
       <h3 class="section-title">Appel Astreintes</h3>
       <div class="quick-actions-grid">
-        <button class="quick-action-btn astreinte-mar" on:click={() => handleQuickAstreinte('MAR')}>
-          <div class="btn-icon"><Phone size={18} /></div>
-          <div class="btn-label">Astreinte MAR</div>
-        </button>
-        <button class="quick-action-btn astreinte-iade" on:click={() => handleQuickAstreinte('Technicien')}>
-          <div class="btn-icon"><Phone size={18} /></div>
-          <div class="btn-label">Astreinte Technicien</div>
-        </button>
+        {#if features.appelMar}
+          <button class="quick-action-btn astreinte-mar" on:click={() => handleQuickAstreinte('MAR')}>
+            <div class="btn-icon"><Phone size={18} /></div>
+            <div class="btn-label">Astreinte MAR</div>
+          </button>
+        {/if}
+        {#if features.appelAstreinte}
+          <button class="quick-action-btn astreinte-iade" on:click={() => handleQuickAstreinte('Technicien')}>
+            <div class="btn-icon"><Phone size={18} /></div>
+            <div class="btn-label">Astreinte Technicien</div>
+          </button>
+        {/if}
       </div>
     </div>
   {/if}
@@ -853,13 +859,13 @@
   /* FAB */
   @keyframes fabPulse {
     0% {
-      box-shadow: 0 4px 16px rgba(79, 70, 229, 0.4), 0 0 0 0 rgba(79, 70, 229, 0.6);
+      box-shadow: 0 4px 16px rgba(19, 160, 159, 0.4), 0 0 0 0 rgba(19, 160, 159, 0.6);
     }
     70% {
-      box-shadow: 0 4px 16px rgba(79, 70, 229, 0.4), 0 0 0 16px rgba(79, 70, 229, 0);
+      box-shadow: 0 4px 16px rgba(19, 160, 159, 0.4), 0 0 0 16px rgba(19, 160, 159, 0);
     }
     100% {
-      box-shadow: 0 4px 16px rgba(79, 70, 229, 0.4), 0 0 0 0 rgba(79, 70, 229, 0);
+      box-shadow: 0 4px 16px rgba(19, 160, 159, 0.4), 0 0 0 0 rgba(19, 160, 159, 0);
     }
   }
 
@@ -1036,7 +1042,7 @@
   }
 
   .ack-btn {
-    display: flex;
+    display: none;
     align-items: center;
     gap: 6px;
     padding: 10px 18px;

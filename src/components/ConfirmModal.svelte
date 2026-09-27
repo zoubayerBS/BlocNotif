@@ -208,7 +208,7 @@
   .btn-confirm.info {
     background: var(--color-primary);
     color: white;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 4px 12px rgba(19, 160, 159, 0.3);
   }
 
   .btn-confirm.info:hover {

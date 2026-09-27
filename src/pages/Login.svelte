@@ -26,7 +26,7 @@
         dispatch('login');
       }, 300);
     } else {
-      errorMessage = 'Identifiant ou mot de passe incorrect.';
+      errorMessage = store.lastLoginError || 'Identifiant ou mot de passe incorrect.';
     }
   }
 </script>

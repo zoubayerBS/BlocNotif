@@ -1,11 +1,20 @@
 import { AbilityBuilder, createMongoAbility } from '@casl/ability';
 
 const roleActions = {
+  'superuser': {
+    User: ['manage'],
+    Notification: ['manage'],
+    Permutation: ['manage'],
+    Room: ['manage'],
+    Settings: ['manage'],
+    Database: ['manage'],
+  },
   'surveillant bloc': {
     User: ['manage'],
     Notification: ['manage'],
     Permutation: ['manage'],
     Room: ['manage'],
+    Settings: ['manage'],
   },
   'technicien': {
     User: ['read'],

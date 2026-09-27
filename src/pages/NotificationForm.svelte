@@ -19,6 +19,7 @@
 
   let rooms = [...store.state.rooms];
   let teamMembers = [...store.state.teamMembers];
+  let features = { ...store.state.features };
   let unsubscribe;
 
   const currentUser = store.state.currentUser;
@@ -28,6 +29,7 @@
     unsubscribe = store.subscribe("notif-form", (state) => {
       rooms = [...state.rooms];
       teamMembers = [...state.teamMembers];
+      features = { ...state.features };
     });
   });
 
@@ -46,6 +48,14 @@
     "Info",
     "Appel Astreinte",
   ];
+
+  const isAppelEnabled = () => features.appelAstreinte || features.appelMar;
+
+  // "Appel Astreinte" masqué tant que l'admin ne l'a pas réactivé
+  $: typeOptions = types.filter(
+    (t) => t !== "Appel Astreinte" || features.appelAstreinte || features.appelMar
+  );
+  $: if (type === "Appel Astreinte" && !isAppelEnabled()) type = "";
 
   const audiences = [
     { value: "all", label: "Tout le monde" },
@@ -206,7 +216,7 @@
 
         {#if typeDropdownOpen}
           <div class="custom-select-dropdown">
-            {#each types as t}
+            {#each typeOptions as t}
               <button
                 type="button"
                 class="custom-select-option"

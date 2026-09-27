@@ -91,6 +91,11 @@ export const create = mutation({
           userId: uid,
         });
       }
+    } else {
+      console.warn(
+        `Push non envoyée (aucun abonné) : type="${args.type}" audience="${args.audience}" ` +
+          `ciblés=${targetUserIds.length} — ${pushTitle}`
+      );
     }
 
     return newNotifId;

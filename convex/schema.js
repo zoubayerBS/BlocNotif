@@ -68,6 +68,13 @@ export default defineSchema({
     name: v.string(),
   }),
 
+  // Drapeaux de fonctionnalités pilotés depuis l'espace admin
+  settings: defineTable({
+    key: v.string(), // "features"
+    appelAstreinte: v.boolean(),
+    appelMar: v.boolean(),
+  }).index("by_key", ["key"]),
+
   pushSubscriptions: defineTable({
     userId: v.id("users"),
     subscription: v.any(),

@@ -6,11 +6,17 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen"],
+  "display_override": [
+    "standalone",
+    "fullscreen"
+  ],
   "background_color": "#0f1117",
-  "theme_color": "#0f1117",
+  "theme_color": "#13A09F",
   "orientation": "portrait",
-  "categories": ["medical", "productivity"],
+  "categories": [
+    "medical",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",

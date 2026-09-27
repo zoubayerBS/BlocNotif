@@ -131,8 +131,8 @@
     currentUser = store.state.currentUser;
   }
 
-  function handleLogout() {
-    store.logout();
+  async function handleLogout() {
+    await store.logout();
     currentUser = null;
   }
 
@@ -355,7 +355,7 @@
     color: var(--color-primary);
     border-radius: var(--radius-md);
     border: 1px solid var(--border-card);
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+    box-shadow: 0 4px 12px rgba(19, 160, 159, 0.1);
   }
 
   .logo-text {

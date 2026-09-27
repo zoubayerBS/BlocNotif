@@ -1,6 +1,6 @@
-import { query, internalQuery, mutation } from "./_generated/server";
+import { query, internalQuery, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { getUserFromContext, checkAbility, validateRole } from "./authorization.js";
+import { getUserFromContext, checkAbility, validateRole, isReservedRole } from "./authorization.js";
 
 export const remove = mutation({
   args: { id: v.id("users") },
@@ -17,11 +17,19 @@ export const updateRole = mutation({
     const user = await getUserFromContext(ctx);
     checkAbility(user, 'manage', 'User');
     validateRole(args.role);
+    // Seul un superuser peut attribuer le rôle superuser
+    // (exception : aucun superuser n'existe encore -> bootstrap)
+    if (isReservedRole(args.role) && !isReservedRole(user.role)) {
+      const users = await ctx.db.query("users").collect();
+      if (users.some((u) => isReservedRole(u.role))) {
+        throw new Error("Non autorisé : rôle réservé");
+      }
+    }
     await ctx.db.patch(args.id, { role: args.role });
   },
 });
 
-export const setPassword = mutation({
+export const setPassword = internalMutation({
   args: { userId: v.id("users"), password: v.string() },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.userId, { password: args.password });
@@ -91,6 +99,10 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     validateRole(args.role);
+    // L'inscription ne peut jamais créer de superuser
+    if (isReservedRole(args.role)) {
+      throw new Error("Rôle réservé");
+    }
 
     const existing = await ctx.db
       .query("users")
@@ -126,6 +138,18 @@ export const savePushSubscription = mutation({
     const existingSub = existing.find(
       (sub) => sub.subscription.endpoint === args.subscription.endpoint
     );
+
+    // Un endpoint (appareil) ne doit être lié qu'à un seul utilisateur :
+    // sinon l'appareil recevrait les pushes d'un ancien compte (poste partagé).
+    const allSubs = await ctx.db.query("pushSubscriptions").collect();
+    for (const sub of allSubs) {
+      if (
+        sub.userId !== args.userId &&
+        sub.subscription?.endpoint === args.subscription.endpoint
+      ) {
+        await ctx.db.delete(sub._id);
+      }
+    }
 
     if (existingSub) {
       await ctx.db.patch(existingSub._id, {

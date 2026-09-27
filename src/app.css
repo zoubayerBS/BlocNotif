@@ -12,10 +12,10 @@
   --bg-hover: rgba(255, 255, 255, 0.45);
   --bg-input: rgba(255, 255, 255, 0.55);
 
-  --color-primary: #4f46e5;
-  --color-primary-light: #6366f1;
-  --color-primary-dark: #4338ca;
-  --color-primary-glow: rgba(79, 70, 229, 0.15);
+  --color-primary: #13A09F;
+  --color-primary-light: #17BCBB;
+  --color-primary-dark: #0E7E7D;
+  --color-primary-glow: rgba(19, 160, 159, 0.15);
 
   --color-accent: #0ea5e9;
   --color-accent-light: #38bdf8;
@@ -108,7 +108,7 @@
   --bg-card: #1e2028;
   --border-card: rgba(255, 255, 255, 0.08);
 
-  --color-primary-glow: rgba(99, 102, 241, 0.25);
+  --color-primary-glow: rgba(19, 160, 159, 0.25);
   --color-accent-glow: rgba(56, 189, 248, 0.2);
   --color-danger-glow: rgba(239, 68, 68, 0.2);
   --color-warning-glow: rgba(245, 158, 11, 0.2);
@@ -129,9 +129,9 @@
 
 [data-theme="dark"] body {
   background:
-    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.08), transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(14, 165, 233, 0.08), transparent 40%),
-    radial-gradient(circle at 70% 30%, rgba(16, 185, 129, 0.06), transparent 40%),
+    radial-gradient(circle at 10% 20%, rgba(19, 160, 159, 0.1), transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(19, 160, 159, 0.08), transparent 40%),
+    radial-gradient(circle at 70% 30%, rgba(19, 160, 159, 0.06), transparent 40%),
     var(--bg-primary);
 }
 
@@ -223,9 +223,9 @@ html {
 body {
   font-family: var(--font-family);
   background: 
-    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12), transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(14, 165, 233, 0.12), transparent 40%),
-    radial-gradient(circle at 70% 30%, rgba(16, 185, 129, 0.08), transparent 40%),
+    radial-gradient(circle at 10% 20%, rgba(19, 160, 159, 0.12), transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(19, 160, 159, 0.1), transparent 40%),
+    radial-gradient(circle at 70% 30%, rgba(19, 160, 159, 0.06), transparent 40%),
     var(--bg-primary);
   background-attachment: fixed;
   color: var(--text-primary);

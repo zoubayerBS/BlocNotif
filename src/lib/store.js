@@ -12,21 +12,32 @@ class Store {
       notifications: [],
       permutations: [],
       rooms: [],
+      features: { appelAstreinte: false, appelMar: false },
     };
     this._listeners = new Map();
     this._eventListeners = new Map();
     this._ability = defineAbilitiesFor(null);
+    this._sessionToken = null;
+    this.lastLoginError = null;
 
     // Load local session
     try {
       const raw = localStorage.getItem(SESSION_KEY);
       if (raw) {
-        this._state.currentUser = JSON.parse(raw);
-        this._ability = defineAbilitiesFor(this._state.currentUser?.role);
-        // Try to resubscribe to push if already permission granted
-        if (Notification.permission === 'granted') {
-          this.subscribeToPush();
+        const stored = JSON.parse(raw);
+        const { sessionToken, ...user } = stored;
+        // Auth Convex AVANT les abonnements realtime (les requêtes doivent
+        // être authentifiées)
+        this.applyAuthToken(sessionToken);
+        if (!sessionToken) {
+          console.warn(
+            'Session locale sans token : reconnectez-vous pour activer les actions protégées.'
+          );
         }
+        this._state.currentUser = user;
+        this._ability = defineAbilitiesFor(user?.role);
+        // (Ré)abonner l'appareil aux pushes : demande la permission si besoin
+        this.ensurePushSubscription();
       }
     } catch (e) {}
 
@@ -39,7 +50,7 @@ class Store {
         if (freshUser) {
           this._state.currentUser = { ...freshUser };
           this._ability = defineAbilitiesFor(freshUser.role);
-          localStorage.setItem(SESSION_KEY, JSON.stringify(freshUser));
+          this.persistSession(freshUser);
         }
       }
       this._notifyAll();
@@ -65,6 +76,12 @@ class Store {
     // 5. Subscribe to rooms
     convex.onUpdate(api.rooms.list, {}, (rooms) => {
       this._state.rooms = rooms;
+      this._notifyAll();
+    });
+
+    // 6. Subscribe to feature flags (paramètres admin)
+    convex.onUpdate(api.settings.get, {}, (features) => {
+      this._state.features = features;
       this._notifyAll();
     });
 
@@ -124,8 +141,54 @@ class Store {
     }
   }
 
+  // --- Session / auth Convex ---
+
+  applyAuthToken(token) {
+    this._sessionToken = token || null;
+    if (!token) return;
+    try {
+      // Requêtes one-shot (mutations) + abonnements realtime
+      httpClient.setAuth(token);
+      convex.setAuth(async () => token, () => {});
+    } catch (e) {
+      console.error('setAuth failed', e);
+    }
+  }
+
+  persistSession(user) {
+    if (!user) return;
+    localStorage.setItem(
+      SESSION_KEY,
+      JSON.stringify({ ...user, sessionToken: this._sessionToken })
+    );
+  }
+
   // --- Push Notifications ---
-  
+
+  async ensurePushSubscription() {
+    if (!('Notification' in window)) return;
+    if (!this._state.currentUser) return;
+
+    let permission = Notification.permission;
+    if (permission === 'default') {
+      try {
+        permission = await Notification.requestPermission();
+      } catch (e) {
+        permission = 'denied';
+      }
+    }
+
+    if (permission === 'granted') {
+      try {
+        await this.subscribeToPush();
+      } catch (e) {
+        console.warn('Abonnement push impossible (non bloquant) :', e);
+      }
+    } else {
+      console.warn('Push non abonné : permission =', permission);
+    }
+  }
+
   async subscribeToPush() {
     if (!this._state.currentUser) return;
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -152,8 +215,10 @@ class Store {
       });
     } catch (e) {
       console.error('Failed to subscribe to push', e);
-      throw e;
+      // Ne jamais faire échouer l'appelant (connexion, restauration de session)
+      return false;
     }
+    return true;
   }
 
   async unsubscribeFromPush() {
@@ -199,35 +264,51 @@ class Store {
   // --- Auth ---
 
   async loginWithUsername(username, password) {
+    this.lastLoginError = null;
     let permissionPromise = null;
     if ('Notification' in window && Notification.permission === 'default') {
-      permissionPromise = Notification.requestPermission();
+      permissionPromise = Notification.requestPermission().catch(() => 'denied');
     }
 
     try {
       const user = await httpClient.action(api.auth.login, { username, password });
-      if (user) {
-        this._state.currentUser = { ...user };
-        this._ability = defineAbilitiesFor(user.role);
-        localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-        
-        if (permissionPromise) {
-          const permission = await permissionPromise;
-          if (permission === 'granted') {
-            this.subscribeToPush();
-          }
-        } else if ('Notification' in window && Notification.permission === 'granted') {
-          this.subscribeToPush();
-        }
-        
-        this._notifyAll();
-        return true;
+      if (!user) {
+        this.lastLoginError = 'Identifiant ou mot de passe incorrect.';
+        return false;
       }
-      return false;
+
+      const { sessionToken, ...safeUser } = user;
+      this.applyAuthToken(sessionToken);
+      this._state.currentUser = safeUser;
+      this._ability = defineAbilitiesFor(safeUser.role);
+      this.persistSession(safeUser);
+      this._notifyAll();
+
+      // Push : ne doit JAMAIS faire échouer la connexion
+      try {
+        if (permissionPromise) await permissionPromise;
+        await this.ensurePushSubscription();
+      } catch (e) {
+        console.warn('Abonnement push impossible (non bloquant) :', e);
+      }
+
+      return true;
     } catch (e) {
-      console.error("Login failed:", e);
+      console.error('Login failed:', e);
+      this.lastLoginError = this._friendlyAuthError(e);
       return false;
     }
+  }
+
+  _friendlyAuthError(e) {
+    const msg = String(e?.message || e || '').split('\n')[0];
+    if (/fetch|network|Failed to load|load failed|ECONN/i.test(msg)) {
+      return 'Connexion au serveur impossible. Vérifiez votre réseau.';
+    }
+    if (/Non authentifi|password|credential/i.test(msg)) {
+      return 'Identifiant ou mot de passe incorrect.';
+    }
+    return `Erreur serveur : ${msg.slice(0, 160)}`;
   }
 
   async register(userData) {
@@ -255,14 +336,18 @@ class Store {
     }
   }
 
-  logout() {
+  async logout() {
+    // Retirer l'abonnement AVANT d'effacer la session : unsubscribeFromPush
+    // lit le userId dans localStorage (SESSION_KEY)
+    try {
+      await this.unsubscribeFromPush();
+    } catch (e) {
+      console.error('unsubscribeFromPush failed', e);
+    }
+
     this._state.currentUser = null;
     this._ability = defineAbilitiesFor(null);
     localStorage.removeItem(SESSION_KEY);
-    
-    
-    // Unsubscribe from push
-    this.unsubscribeFromPush();
 
     window.location.reload();
   }
@@ -301,6 +386,74 @@ class Store {
   async removeRoom(id) {
     try {
       await httpClient.mutation(api.rooms.remove, { id });
+      return { success: true };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  // --- Feature flags (admin) ---
+
+  async updateFeatures(features) {
+    try {
+      await httpClient.mutation(api.settings.update, {
+        appelAstreinte: !!features.appelAstreinte,
+        appelMar: !!features.appelMar,
+      });
+      return { success: true };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  // --- Base de données (superuser) ---
+
+  async dbStats() {
+    try {
+      const data = await httpClient.query(api.database.stats, {});
+      return { success: true, data };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  async dbList(collection, limit = 50) {
+    try {
+      const data = await httpClient.query(api.database.list, { collection, limit });
+      return { success: true, data };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  async dbRemoveDocument(collection, id) {
+    try {
+      await httpClient.mutation(api.database.removeDocument, { collection, id });
+      return { success: true };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  async dbClearCollection(collection) {
+    try {
+      const res = await httpClient.mutation(api.database.clearCollection, { collection });
+      return { success: true, deleted: res?.deleted ?? 0 };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  async seedDefaults() {
+    try {
+      await httpClient.mutation(api.rooms.seed, {});
+      await httpClient.mutation(api.users.seedTeam, {});
       return { success: true };
     } catch (e) {
       console.error(e);

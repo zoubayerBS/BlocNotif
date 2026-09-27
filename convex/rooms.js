@@ -41,15 +41,15 @@ export const remove = mutation({
 export const seed = mutation({
   args: {},
   handler: async (ctx) => {
+    // Bootstrap UNIQUEMENT si la table est vide : sinon les salles
+    // supprimées par l'utilisateur réapparaîtraient à chaque rechargement.
+    const existing = await ctx.db.query("rooms").first();
+    if (existing) return "Already seeded";
+
     const rooms = ["Salle 1", "Salle 2", "Salle 3", "Salle 4", "Salle 5", "Salle 6", "SSPI"];
     for (const name of rooms) {
-      const existing = await ctx.db
-        .query("rooms")
-        .filter((q) => q.eq(q.field("name"), name))
-        .first();
-      if (!existing) {
-        await ctx.db.insert("rooms", { name });
-      }
+      await ctx.db.insert("rooms", { name });
     }
+    return "Seeded successfully";
   },
 });
