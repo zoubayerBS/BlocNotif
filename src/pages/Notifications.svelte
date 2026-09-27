@@ -2,26 +2,41 @@
   import { store } from '../lib/store.js';
   import NotificationForm from './NotificationForm.svelte';
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
-  import { Bell, ShieldAlert, Wrench, Package, AlertTriangle, Info, CheckCircle2, ListFilter, UserSquare2, Syringe, Coffee, Ban, Phone, X, Megaphone } from 'lucide-svelte';
-  import { isInfoType, getResolveLabel, getResolveToast } from '../lib/notifications.js';
+  import { Bell, ShieldAlert, Wrench, Package, AlertTriangle, Info, CheckCircle2, ListFilter, UserSquare2, Syringe, Coffee, Ban, Phone, X, Megaphone, Archive, Edit2, Trash2 } from 'lucide-svelte';
+  import { isInfoType, getResolveLabel } from '../lib/notifications.js';
+  import ConfirmModal from '../components/ConfirmModal.svelte';
 
   const dispatch = createEventDispatcher();
 
   let notifications = [...store.state.notifications];
   let teamMembers = [...store.state.teamMembers];
   let features = { ...store.state.features };
+  let archives = [...store.state.archives];
   let showForm = false;
   let showIadeSelect = false;
   let showMarSelect = false;
-  let filter = 'all'; // all | haute | moyenne | basse
+  let filter = 'all'; // all | haute | moyenne | basse | archives
   let searchQuery = '';
   let unsubscribe;
+
+  // Appui long -> menu contextuel
+  let contextMenu = null;
+  let pressTimer = null;
+  let pressStart = null;
+
+  // Édition d'une alerte (même forme que la création)
+  let editingNotif = null;
+
+  // Confirmation (suppression)
+  let showConfirm = false;
+  let confirmConfig = { title: '', message: '', type: 'danger', onConfirm: () => {} };
 
   onMount(() => {
     unsubscribe = store.subscribe('notifications-page', (state) => {
       notifications = [...state.notifications];
       teamMembers = [...state.teamMembers];
       features = { ...state.features };
+      archives = [...state.archives];
     });
   });
 
@@ -35,9 +50,13 @@
     dispatch('toast', { message: 'Notification prise en charge', type: 'success' });
   }
 
-  function handleResolve(notif) {
-    store.resolveNotification(notif._id);
-    dispatch('toast', { message: getResolveToast(notif.type), type: 'success' });
+  async function handleResolve(notif) {
+    const result = await store.resolveNotification(notif._id);
+    if (result.success) {
+      dispatch('toast', { message: 'Alerte clôturée et archivée', type: 'success' });
+    } else {
+      dispatch('toast', { message: result.error || 'Clôture impossible', type: 'error' });
+    }
   }
 
   function handleAcknowledge(notifId) {
@@ -48,10 +67,105 @@
 
   function handleCreate(event) {
     const data = event.detail;
+    if (data._id) {
+      handleEditSubmit(data);
+      return;
+    }
     store.addNotification(data);
     showForm = false;
     if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
     dispatch('toast', { message: 'Alerte envoyée à l\'équipe', type: 'success' });
+  }
+
+  async function handleEditSubmit(data) {
+    const { _id, ...patch } = data;
+    const result = await store.updateNotification(_id, patch);
+    if (result.success) {
+      editingNotif = null;
+      dispatch('toast', { message: 'Alerte modifiée', type: 'success' });
+    } else {
+      dispatch('toast', { message: result.error || 'Modification impossible', type: 'error' });
+    }
+  }
+
+  // --- Appui long : menu Modifier / Supprimer ---
+
+  function startLongPress(e, notif) {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (e.target.closest('button')) return;
+    pressStart = { x: e.clientX, y: e.clientY };
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => openContextMenu(notif, e.clientX, e.clientY), 500);
+  }
+
+  function cancelLongPress() {
+    clearTimeout(pressTimer);
+    pressTimer = null;
+    pressStart = null;
+  }
+
+  function moveLongPress(e) {
+    if (!pressTimer || !pressStart) return;
+    if (Math.abs(e.clientX - pressStart.x) > 10 || Math.abs(e.clientY - pressStart.y) > 10) {
+      cancelLongPress();
+    }
+  }
+
+  function openContextMenu(notif, x, y) {
+    cancelLongPress();
+    if (navigator.vibrate) navigator.vibrate(30);
+    const menuW = 190;
+    const menuH = 112;
+    contextMenu = {
+      notif,
+      x: Math.max(8, Math.min(x, window.innerWidth - menuW - 8)),
+      y: Math.max(8, Math.min(y, window.innerHeight - menuH - 8)),
+    };
+  }
+
+  function openContextMenuFromRightClick(e, notif) {
+    e.preventDefault();
+    openContextMenu(notif, e.clientX, e.clientY);
+  }
+
+  function closeContextMenu() {
+    contextMenu = null;
+  }
+
+  // --- Édition : réutilise la forme "Nouvelle alerte" ---
+
+  function startEdit(notif) {
+    closeContextMenu();
+    editingNotif = notif;
+  }
+
+  function cancelEdit() {
+    editingNotif = null;
+  }
+
+  // --- Suppression ---
+
+  function startDelete(notif) {
+    closeContextMenu();
+    confirmConfig = {
+      title: 'Supprimer cette alerte',
+      message: `« ${notif.message || notif.type} » sera définitivement supprimée, avec son journal d'audit.`,
+      type: 'danger',
+      onConfirm: async () => {
+        const result = await store.removeNotification(notif._id);
+        if (result.success) {
+          dispatch('toast', { message: 'Alerte supprimée', type: 'warning' });
+        } else {
+          dispatch('toast', { message: result.error || 'Suppression impossible', type: 'error' });
+        }
+      }
+    };
+    showConfirm = true;
+  }
+
+  function handleModalConfirm() {
+    confirmConfig.onConfirm();
+    showConfirm = false;
   }
 
   function handleQuickAstreinte(type) {
@@ -169,6 +283,25 @@
   }
 
   $: filteredNotifications = filterNotifs(notifications, filter, searchQuery, currentUser);
+
+  function filterArchives(all, query, user) {
+    let result = [...all];
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      result = result.filter(a => {
+        return (a.type || '').toLowerCase().includes(q)
+          || (a.message || '').toLowerCase().includes(q)
+          || (a.room || '').toLowerCase().includes(q)
+          || (a.authorName || '').toLowerCase().includes(q)
+          || (a.patient && a.patient.toLowerCase().includes(q));
+      });
+    }
+    // Mêmes règles de visibilité que pour les alertes actives
+    result = result.filter(a => canSeeNotification(a, user));
+    return result;
+  }
+
+  $: filteredArchives = filterArchives(archives, searchQuery, currentUser);
 </script>
 
 <div class="page notifications-page">
@@ -177,7 +310,13 @@
       <span class="title-icon"><Bell size={28} /></span>
       Alertes bloc
     </h1>
-    <span class="notif-count">{filteredNotifications.length} active{filteredNotifications.length > 1 ? 's' : ''}</span>
+    <span class="notif-count">
+      {#if filter === 'archives'}
+        {filteredArchives.length} archivée{filteredArchives.length > 1 ? 's' : ''}
+      {:else}
+        {filteredNotifications.length} active{filteredNotifications.length > 1 ? 's' : ''}
+      {/if}
+    </span>
   </div>
 
   <!-- Filters -->
@@ -193,6 +332,9 @@
     </button>
     <button class="filter-chip priority-low" style="display: inline-flex; align-items: center; gap: 4px;" class:active={filter === 'basse'} on:click={() => filter = 'basse'}>
       <Info size={16} /> Basse
+    </button>
+    <button class="filter-chip" style="display: inline-flex; align-items: center; gap: 4px;" class:active={filter === 'archives'} on:click={() => filter = 'archives'}>
+      <Archive size={16} /> Archives ({archives.length})
     </button>
   </div>
 
@@ -237,7 +379,75 @@
 
   <!-- Notification List -->
   <div class="notif-list">
-    {#if filteredNotifications.length === 0}
+    {#if filter === 'archives'}
+      {#if filteredArchives.length === 0}
+        <div class="empty-state">
+          <div class="empty-icon"><Archive size={48} /></div>
+          <h3>Aucune archive</h3>
+          <p>Les alertes et annonces clôturées apparaîtront ici</p>
+        </div>
+      {:else}
+        {#each filteredArchives as arch, i}
+          <div class="notif-card archived" style="animation-delay: {i * 50}ms">
+            <div class="notif-header-new">
+              <div class="type-icon-wrapper {getPriorityClass(arch.priority)}">
+                <svelte:component this={getTypeIcon(arch.type)} size={22} />
+              </div>
+
+              <div class="notif-titles">
+                <div class="notif-title-row">
+                  <span class="type-label">{arch.type}</span>
+                  <span class="archived-badge">Clôturée</span>
+                </div>
+                <div class="notif-room">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                  </svg>
+                  {arch.room}
+                  {#if arch.patient}
+                    <span class="meta-dot">•</span>
+                    <span class="notif-patient"><UserSquare2 size={14} /> {arch.patient}</span>
+                  {/if}
+                </div>
+              </div>
+            </div>
+
+            {#if arch.message}
+              <div class="notif-divider"></div>
+              <p class="notif-message">{arch.message}</p>
+            {/if}
+
+            {#if arch.acknowledgedBy?.length > 0}
+              <div class="notif-divider"></div>
+              <div class="acks-section">
+                <span class="acks-title">Lu par ({arch.acknowledgedBy.length}) :</span>
+                <div class="acks-list">
+                  {#each arch.acknowledgedBy as ack}
+                    <span class="ack-badge" title={formatTime(ack.timestamp)}>{ack.userName}</span>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+
+            <div class="notif-divider"></div>
+            <div class="notif-footer">
+              <div class="notif-meta">
+                <span class="notif-author-avatar">{arch.authorName.charAt(0)}</span>
+                <span class="notif-author">{arch.authorName}</span>
+                <span class="meta-dot">•</span>
+                <span class="notif-time">créée {formatTime(arch.originalTimestamp)}</span>
+                <span class="meta-dot">•</span>
+                <span class="notif-time">clôturée {formatTime(arch.resolvedAt)}</span>
+              </div>
+              {#if arch.resolvedBy}
+                <span class="ack-status-badge">par {arch.resolvedBy}</span>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      {/if}
+    {:else if filteredNotifications.length === 0}
       <div class="empty-state">
         <div class="empty-icon"><CheckCircle2 size={48} /></div>
         <h3>Aucune alerte active</h3>
@@ -248,7 +458,14 @@
         <div
           class="notif-card"
           class:taken={notif.takenBy}
+          role="article"
           style="animation-delay: {i * 50}ms"
+          on:pointerdown={(e) => startLongPress(e, notif)}
+          on:pointerup={cancelLongPress}
+          on:pointerleave={cancelLongPress}
+          on:pointermove={moveLongPress}
+          on:pointercancel={cancelLongPress}
+          on:contextmenu={(e) => openContextMenuFromRightClick(e, notif)}
         >
           <div class="notif-header-new">
             <div class="type-icon-wrapper {getPriorityClass(notif.priority)}">
@@ -347,6 +564,38 @@
   <!-- Form Modal -->
   {#if showForm}
     <NotificationForm on:submit={handleCreate} on:close={() => showForm = false} />
+  {/if}
+
+  <!-- Menu contextuel (appui long / clic droit) -->
+  {#if contextMenu}
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div class="ctx-backdrop" on:click={closeContextMenu} on:contextmenu|preventDefault={closeContextMenu}></div>
+    <div class="ctx-menu" style="left: {contextMenu.x}px; top: {contextMenu.y}px;">
+      <button class="ctx-item" on:click={() => startEdit(contextMenu.notif)}>
+        <Edit2 size={16} /> Modifier
+      </button>
+      <button class="ctx-item danger" on:click={() => startDelete(contextMenu.notif)}>
+        <Trash2 size={16} /> Supprimer
+      </button>
+    </div>
+  {/if}
+
+  <!-- Édition : même forme que la création -->
+  {#if editingNotif}
+    <NotificationForm
+      notification={editingNotif}
+      on:submit={handleCreate}
+      on:close={cancelEdit}
+    />
+  {/if}
+
+  {#if showConfirm}
+    <ConfirmModal
+      {...confirmConfig}
+      on:confirm={handleModalConfirm}
+      on:cancel={() => (showConfirm = false)}
+    />
   {/if}
 
   {#if showIadeSelect}
@@ -619,6 +868,9 @@
     overflow: hidden;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
 
   .notif-card:hover {
@@ -629,6 +881,16 @@
   .notif-card.taken {
     opacity: 0.7;
     filter: grayscale(0.3);
+  }
+
+  .notif-card.archived {
+    opacity: 0.88;
+    background: var(--bg-elevated);
+  }
+
+  .notif-card.archived:hover {
+    transform: none;
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.04) !important;
   }
 
   .notif-header-new {
@@ -1069,5 +1331,97 @@
     padding: 6px 12px;
     background: var(--color-success-glow);
     border-radius: var(--radius-full);
+  }
+
+  .archived-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--fs-xs);
+    font-weight: 800;
+    color: var(--color-primary);
+    padding: 6px 12px;
+    background: var(--color-primary-glow);
+    border-radius: var(--radius-full);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* Menu contextuel (appui long / clic droit) */
+  .ctx-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
+    background: transparent;
+  }
+
+  .ctx-menu {
+    position: fixed;
+    z-index: 1501;
+    display: flex;
+    flex-direction: column;
+    min-width: 176px;
+    padding: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+    animation: ctxIn 0.15s ease-out;
+    transform-origin: top left;
+  }
+
+  @keyframes ctxIn {
+    from { opacity: 0; transform: scale(0.94); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .ctx-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-md);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    color: var(--text-primary);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease;
+  }
+
+  .ctx-item:hover {
+    background: var(--bg-elevated);
+  }
+
+  .ctx-item.danger {
+    color: var(--color-danger);
+  }
+
+  .ctx-item.danger:hover {
+    background: var(--color-danger-glow);
+  }
+
+  /* Bouton de fermeture des modales */
+  .modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: var(--radius-full);
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .modal-close:hover {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    transform: rotate(90deg);
   }
 </style>

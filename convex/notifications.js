@@ -1,6 +1,32 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { getUserFromContext, checkAbility } from "./authorization.js";
+
+// Déplace une notification clôturée vers la table "archives"
+async function archiveNotification(ctx, notif, resolvedAt, resolvedBy) {
+  await ctx.db.insert("archives", {
+    sourceId: notif._id,
+    kind: notif.type === "Annonce" ? "annonce" : "notification",
+    type: notif.type,
+    room: notif.room,
+    priority: notif.priority,
+    message: notif.message,
+    patient: notif.patient || undefined,
+    authorId: notif.authorId,
+    authorName: notif.authorName,
+    audience: notif.audience || undefined,
+    targetId: notif.targetId ?? null,
+    originalTimestamp: notif.timestamp,
+    takenBy: notif.takenBy ?? null,
+    takenByName: notif.takenByName ?? null,
+    takenAt: notif.takenAt ?? null,
+    acknowledgedBy: notif.acknowledgedBy || [],
+    resolvedAt,
+    resolvedBy,
+  });
+  await ctx.db.delete(notif._id);
+}
 
 export const list = query({
   args: {},
@@ -117,6 +143,66 @@ function getAudienceUserIds(users, audience) {
   }
 }
 
+// Seul l'auteur (ou un admin) peut modifier / supprimer / clôturer
+async function requireAuthorOrAdmin(ctx, notif) {
+  const user = await getUserFromContext(ctx);
+  if (notif.authorId !== user._id) {
+    checkAbility(user, "manage", "Notification");
+  }
+  return user;
+}
+
+export const update = mutation({
+  args: {
+    notifId: v.id("notifications"),
+    message: v.optional(v.string()),
+    priority: v.optional(v.string()),
+    room: v.optional(v.string()),
+    patient: v.optional(v.string()),
+    type: v.optional(v.string()),
+    audience: v.optional(v.string()),
+    targetId: v.optional(v.union(v.id("users"), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const notif = await ctx.db.get(args.notifId);
+    if (!notif) throw new Error("Notification introuvable");
+    await requireAuthorOrAdmin(ctx, notif);
+
+    const patch = {};
+    if (args.message !== undefined) patch.message = args.message;
+    if (args.priority !== undefined) patch.priority = args.priority;
+    if (args.room !== undefined) patch.room = args.room;
+    if (args.patient !== undefined) patch.patient = args.patient;
+    if (args.type !== undefined) patch.type = args.type;
+    if (args.audience !== undefined) patch.audience = args.audience;
+    if (args.targetId !== undefined) patch.targetId = args.targetId;
+
+    await ctx.db.patch(args.notifId, patch);
+    return { success: true };
+  },
+});
+
+export const remove = mutation({
+  args: { notifId: v.id("notifications") },
+  handler: async (ctx, args) => {
+    const notif = await ctx.db.get(args.notifId);
+    if (!notif) throw new Error("Notification introuvable");
+    await requireAuthorOrAdmin(ctx, notif);
+
+    // Cascade : on retire aussi les logs d'audit de cette notification
+    const logs = await ctx.db
+      .query("notificationLogs")
+      .withIndex("by_notifId", (q) => q.eq("notifId", args.notifId))
+      .collect();
+    for (const log of logs) {
+      await ctx.db.delete(log._id);
+    }
+
+    await ctx.db.delete(args.notifId);
+    return { success: true };
+  },
+});
+
 export const take = mutation({
   args: {
     notifId: v.id("notifications"),
@@ -141,9 +227,35 @@ export const resolve = mutation({
     notifId: v.id("notifications"),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.notifId, {
-      resolved: true,
-    });
+    const notif = await ctx.db.get(args.notifId);
+    if (!notif) throw new Error("Notification introuvable");
+
+    const user = await getUserFromContext(ctx);
+    // Seul l'auteur (ou un admin) peut clôturer
+    if (notif.authorId !== user._id) {
+      checkAbility(user, "manage", "Notification");
+    }
+
+    if (notif.resolved) return { success: true };
+
+    await archiveNotification(ctx, notif, Date.now(), user.name);
+    return { success: true };
+  },
+});
+
+// Maintenance : archive les notifications déjà clôturées (resolved: true)
+export const archiveResolved = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getUserFromContext(ctx);
+    checkAbility(user, "manage", "Database");
+
+    const resolved = (await ctx.db.query("notifications").collect())
+      .filter((n) => n.resolved);
+    for (const notif of resolved) {
+      await archiveNotification(ctx, notif, Date.now(), "migration");
+    }
+    return { success: true, archived: resolved.length };
   },
 });
 

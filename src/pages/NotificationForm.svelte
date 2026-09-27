@@ -1,20 +1,23 @@
 <script>
   import { store } from "../lib/store.js";
   import { createEventDispatcher, onMount, onDestroy } from "svelte";
-  import { Bell } from "lucide-svelte";
+  import { Bell, Edit2 } from "lucide-svelte";
 
   const dispatch = createEventDispatcher();
 
-  let room = "";
+  // Mode édition : la même forme sert à créer et à modifier une alerte
+  export let notification = null;
+
+  let room = notification?.room || "";
   let roomDropdownOpen = false;
-  let type = "";
+  let type = notification?.type || "";
   let typeDropdownOpen = false;
-  let priority = "";
-  let patient = "";
-  let message = "";
+  let priority = notification?.priority || "";
+  let patient = notification?.patient || "";
+  let message = notification?.message || "";
   let selectedRecipient = null;
   let recipientDropdownOpen = false;
-  let audience = "all";
+  let audience = notification?.audience || "all";
   let audienceDropdownOpen = false;
 
   let rooms = [...store.state.rooms];
@@ -55,7 +58,19 @@
   $: typeOptions = types.filter(
     (t) => t !== "Appel Astreinte" || features.appelAstreinte || features.appelMar
   );
-  $: if (type === "Appel Astreinte" && !isAppelEnabled()) type = "";
+  $: if (type === "Appel Astreinte" && !isAppelEnabled() && !notification) type = "";
+
+  // En édition, on retrouve le destinataire d'origine
+  $: if (
+    notification &&
+    type === "Appel Astreinte" &&
+    notification.targetId &&
+    !selectedRecipient &&
+    teamMembers.length
+  ) {
+    selectedRecipient =
+      teamMembers.find((m) => m._id === notification.targetId) || null;
+  }
 
   const audiences = [
     { value: "all", label: "Tout le monde" },
@@ -70,7 +85,16 @@
   function handleSubmit(e) {
     e.preventDefault();
     if (isFormInvalid) return;
-    dispatch("submit", { room, type, priority, patient, message, targetId: selectedRecipient?._id, audience });
+    dispatch("submit", {
+      ...(notification ? { _id: notification._id } : {}),
+      room,
+      type,
+      priority,
+      patient,
+      message,
+      targetId: selectedRecipient?._id,
+      audience,
+    });
   }
 
   function handleBackdrop(e) {
@@ -107,7 +131,11 @@
   <div class="modal">
     <div class="modal-header">
       <h2 class="modal-title">
-        <Bell size={24} /> Nouvelle alerte
+        {#if notification}
+          <Edit2 size={24} /> Modifier l'alerte
+        {:else}
+          <Bell size={24} /> Nouvelle alerte
+        {/if}
       </h2>
       <button class="modal-close" on:click={() => dispatch("close")}>
         <svg
@@ -466,7 +494,7 @@
           <line x1="22" y1="2" x2="11" y2="13" />
           <polygon points="22 2 15 22 11 13 2 9 22 2" />
         </svg>
-        Envoyer l'alerte
+        {notification ? "Enregistrer les modifications" : "Envoyer l'alerte"}
       </button>
     </form>
   </div>

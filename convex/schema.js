@@ -80,6 +80,36 @@ export default defineSchema({
     subscription: v.any(),
   }).index("by_userId", ["userId"]),
 
+  // Notifications / annonces clôturées : copie complète + dates de clôture
+  archives: defineTable({
+    sourceId: v.id("notifications"), // id d'origine (document supprimé de "notifications")
+    kind: v.string(), // "annonce" | "notification"
+    type: v.string(),
+    room: v.string(),
+    priority: v.string(),
+    message: v.string(),
+    patient: v.optional(v.string()),
+    authorId: v.id("users"),
+    authorName: v.string(),
+    audience: v.optional(v.string()),
+    targetId: v.optional(v.union(v.id("users"), v.null())),
+    originalTimestamp: v.number(), // date de création d'origine
+    takenBy: v.optional(v.union(v.id("users"), v.null())),
+    takenByName: v.optional(v.union(v.string(), v.null())),
+    takenAt: v.optional(v.union(v.number(), v.null())),
+    acknowledgedBy: v.optional(
+      v.array(
+        v.object({
+          userId: v.id("users"),
+          userName: v.string(),
+          timestamp: v.number(),
+        })
+      )
+    ),
+    resolvedAt: v.number(), // date de clôture
+    resolvedBy: v.optional(v.string()),
+  }).index("by_resolvedAt", ["resolvedAt"]),
+
   notificationLogs: defineTable({
     notifId: v.id("notifications"),
     event: v.string(), // "sent" | "delivered" | "clicked" | "acknowledged"

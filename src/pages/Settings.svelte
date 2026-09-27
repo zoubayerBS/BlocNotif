@@ -158,7 +158,7 @@
 
   const collections = [
     'users', 'rooms', 'notifications', 'absences',
-    'permutations', 'pushSubscriptions', 'notificationLogs', 'settings'
+    'permutations', 'pushSubscriptions', 'notificationLogs', 'settings', 'archives'
   ];
   const collectionLabels = {
     users: 'Utilisateurs',
@@ -169,6 +169,7 @@
     pushSubscriptions: 'Abonnements push',
     notificationLogs: "Journal d'audit",
     settings: 'Paramètres',
+    archives: 'Archives',
   };
 
   let dbStats = null;
@@ -254,6 +255,7 @@
       : collection === 'permutations' ? `${doc.requesterName} ↔ ${doc.targetName} • ${doc.status}`
       : collection === 'pushSubscriptions' ? String(doc.subscription?.endpoint || '').slice(0, 60)
       : collection === 'notificationLogs' ? `${doc.event} • ${doc.userName || '—'}`
+      : collection === 'archives' ? `${doc.type} • ${doc.room} — ${String(doc.message || '').slice(0, 60)}`
       : `${doc.key || ''}`;
     return key;
   }

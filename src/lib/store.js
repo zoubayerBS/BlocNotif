@@ -13,6 +13,7 @@ class Store {
       permutations: [],
       rooms: [],
       features: { appelAstreinte: false, appelMar: false },
+      archives: [],
     };
     this._listeners = new Map();
     this._eventListeners = new Map();
@@ -82,6 +83,12 @@ class Store {
     // 6. Subscribe to feature flags (paramètres admin)
     convex.onUpdate(api.settings.get, {}, (features) => {
       this._state.features = features;
+      this._notifyAll();
+    });
+
+    // 7. Subscribe to archives (notifications / annonces clôturées)
+    convex.onUpdate(api.archives.list, {}, (archives) => {
+      this._state.archives = archives;
       this._notifyAll();
     });
 
@@ -491,10 +498,54 @@ class Store {
     } catch (e) { console.error(e); }
   }
 
+  async removeNotification(notifId) {
+    try {
+      await httpClient.mutation(api.notifications.remove, { notifId });
+      return { success: true };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  async updateNotification(notifId, patch) {
+    try {
+      await httpClient.mutation(api.notifications.update, { notifId, ...patch });
+      return { success: true };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
+  }
+
   async resolveNotification(notifId) {
     try {
       await httpClient.mutation(api.notifications.resolve, { notifId });
-    } catch (e) { console.error(e); }
+      return { success: true };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  async removeArchive(id) {
+    try {
+      await httpClient.mutation(api.archives.remove, { id });
+      return { success: true };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  async purgeArchives() {
+    try {
+      const res = await httpClient.mutation(api.archives.purge, {});
+      return { success: true, deleted: res?.deleted ?? 0 };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
   }
 
   async acknowledgeNotification(notifId) {

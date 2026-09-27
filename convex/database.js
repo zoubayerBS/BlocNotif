@@ -11,6 +11,7 @@ export const COLLECTIONS = [
   "pushSubscriptions",
   "notificationLogs",
   "settings",
+  "archives",
 ];
 
 // Purge en masse interdite : vider les utilisateurs verrouille l'accès à l'app
