@@ -4,6 +4,7 @@
   import Login from "./pages/Login.svelte";
   import Register from "./pages/Register.svelte";
   import Notifications from "./pages/Notifications.svelte";
+  import Absences from "./pages/Absences.svelte";
   import Permutations from "./pages/Permutations.svelte";
   import Settings from "./pages/Settings.svelte";
   import BottomNav from "./components/BottomNav.svelte";
@@ -243,6 +244,8 @@
     <main class="app-content">
       {#if activeTab === "notifications"}
         <Notifications on:toast={showToast} />
+      {:else if activeTab === "absences"}
+        <Absences on:toast={showToast} />
       {:else if activeTab === "permutations"}
         <Permutations on:toast={showToast} />
       {:else if activeTab === "settings"}

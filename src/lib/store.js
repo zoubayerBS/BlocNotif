@@ -14,6 +14,7 @@ class Store {
       rooms: [],
       features: { appelAstreinte: false, appelMar: false },
       archives: [],
+      absences: [],
     };
     this._listeners = new Map();
     this._eventListeners = new Map();
@@ -89,6 +90,12 @@ class Store {
     // 7. Subscribe to archives (notifications / annonces clôturées)
     convex.onUpdate(api.archives.list, {}, (archives) => {
       this._state.archives = archives;
+      this._notifyAll();
+    });
+
+    // 8. Subscribe to absences (congés / maladies de l'équipe)
+    convex.onUpdate(api.absences.list, {}, (absences) => {
+      this._state.absences = absences;
       this._notifyAll();
     });
 
@@ -469,6 +476,26 @@ class Store {
   }
 
   // --- Notifications ---
+
+  async addAbsence({ type, reason, timestamp, duration }) {
+    try {
+      await httpClient.mutation(api.absences.create, { type, reason, timestamp, duration });
+      return { success: true };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  async removeAbsence(id) {
+    try {
+      await httpClient.mutation(api.absences.remove, { id });
+      return { success: true };
+    } catch (e) {
+      console.error(e);
+      return { success: false, error: e.message };
+    }
+  }
 
   async addNotification({ room, type, priority, message, patient, targetId, audience }) {
     if (!this._state.currentUser) return;
