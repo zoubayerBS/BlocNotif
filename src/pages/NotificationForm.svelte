@@ -77,6 +77,7 @@
     { value: "techniciens", label: "Techniciens" },
     { value: "medecins", label: "Medecins Anesthesistes" },
     { value: "instrumentistes", label: "Instrumentistes" },
+    { value: "panseurs", label: "Panseurs" },
     { value: "tech_marc", label: "Techniciens + Medecins" },
   ];
 

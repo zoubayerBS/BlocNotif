@@ -41,7 +41,7 @@
 
   $: pendingPerms = permutations.filter(p => p.status === 'pending');
   $: myPerms = permutations.filter(p => p.requesterId === currentUser?._id || p.targetId === currentUser?._id);
-  $: otherTechnicians = teamMembers.filter(m => m._id !== currentUser?._id && (m.role === 'technicien' || m.role === 'instrumentiste'));
+  $: otherTechnicians = teamMembers.filter(m => m._id !== currentUser?._id && (m.role === 'technicien' || m.role === 'instrumentiste' || m.role === 'panseur'));
 
   function handleSubmit() {
     if (!targetId || !slotA || !slotB) return;

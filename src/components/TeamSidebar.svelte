@@ -57,6 +57,7 @@
               member.role === 'surveillant bloc' ? 'linear-gradient(135deg, var(--color-accent), #00b3ad)' :
               member.role === 'medecin anesthesiste' ? 'linear-gradient(135deg, #a29bfe, #6c5ce7)' :
               member.role === 'instrumentiste' ? 'linear-gradient(135deg, #fd79a8, #e84393)' :
+              member.role === 'panseur' ? 'linear-gradient(135deg, #f7b731, #f5a623)' :
               'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))'
             }">
               {getInitials(member.name)}
@@ -70,6 +71,8 @@
                   <span class="role-badge badge-medecin">Médecin</span>
                 {:else if member.role === 'instrumentiste'}
                   <span class="role-badge badge-instrumentiste">Instrumentiste</span>
+                {:else if member.role === 'panseur'}
+                  <span class="role-badge badge-panseur">Panseur</span>
                 {/if}
               </span>
             </div>
@@ -202,5 +205,10 @@
   .badge-instrumentiste {
     background: rgba(232, 67, 147, 0.15);
     color: #e84393;
+  }
+
+  .badge-panseur {
+    background: rgba(245, 166, 35, 0.18);
+    color: #d97706;
   }
 </style>

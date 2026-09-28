@@ -136,6 +136,8 @@ function getAudienceUserIds(users, audience) {
       return users.filter(u => u.role === 'medecin anesthesiste').map(u => u._id);
     case 'instrumentistes':
       return users.filter(u => u.role === 'instrumentiste').map(u => u._id);
+    case 'panseurs':
+      return users.filter(u => u.role === 'panseur').map(u => u._id);
     case 'tech_marc':
       return users.filter(u => u.role === 'technicien' || u.role === 'medecin anesthesiste').map(u => u._id);
     default:

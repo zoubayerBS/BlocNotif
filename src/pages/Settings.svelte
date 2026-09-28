@@ -91,12 +91,13 @@
   }
 
   async function handleUpdateRole(userId, currentRole) {
-    const roles = ['technicien', 'medecin anesthesiste', 'surveillant bloc', 'instrumentiste'];
+    const roles = ['technicien', 'medecin anesthesiste', 'surveillant bloc', 'instrumentiste', 'panseur'];
     const roleLabels = {
       'technicien': 'Technicien d\'Anesthésie',
       'medecin anesthesiste': 'Médecin Anesthésiste',
       'surveillant bloc': 'Surveillant Bloc',
       'instrumentiste': 'Instrumentiste',
+      'panseur': 'Panseur',
       'superuser': 'Superuser'
     };
     // Le rôle superuser n'est cycleable que par un superuser

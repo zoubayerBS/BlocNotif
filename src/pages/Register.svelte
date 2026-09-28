@@ -18,7 +18,8 @@
     { value: 'technicien', label: 'Technicien d\'Anesthésie' },
     { value: 'medecin anesthesiste', label: 'Médecin Anesthésiste' },
     { value: 'surveillant bloc', label: 'Surveillant Bloc' },
-    { value: 'instrumentiste', label: 'Instrumentiste' }
+    { value: 'instrumentiste', label: 'Instrumentiste' },
+    { value: 'panseur', label: 'Panseur' }
   ];
 
   async function handleRegister(e) {

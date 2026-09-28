@@ -1,5 +1,14 @@
 import { AbilityBuilder, createMongoAbility } from '@casl/ability';
 
+// Panseurs et instrumentistes ont exactement les mêmes droits
+const roomStaffRights = {
+  User: ['read'],
+  Notification: ['create', 'read', 'acknowledge', 'resolve'],
+  Permutation: ['create', 'read'],
+  Absence: ['create', 'read'],
+  Room: ['read'],
+};
+
 const roleActions = {
   'superuser': {
     User: ['manage'],
@@ -32,13 +41,8 @@ const roleActions = {
     Absence: ['create', 'read'],
     Room: ['read'],
   },
-  'instrumentiste': {
-    User: ['read'],
-    Notification: ['create', 'read', 'acknowledge', 'resolve'],
-    Permutation: ['create', 'read'],
-    Absence: ['create', 'read'],
-    Room: ['read'],
-  },
+  'instrumentiste': roomStaffRights,
+  'panseur': roomStaffRights,
 };
 
 export function defineAbilitiesFor(role) {

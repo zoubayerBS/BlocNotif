@@ -24,7 +24,7 @@ export default defineSchema({
     authorName: v.string(),
     timestamp: v.number(),
     targetId: v.optional(v.union(v.id("users"), v.null())),
-    audience: v.optional(v.string()), // "all" | "techniciens" | "medecins" | "instrumentistes" | "tech_marc"
+    audience: v.optional(v.string()), // "all" | "techniciens" | "medecins" | "instrumentistes" | "panseurs" | "tech_marc"
     takenBy: v.union(v.id("users"), v.null()),
     takenByName: v.union(v.string(), v.null()),
     takenAt: v.union(v.number(), v.null()),

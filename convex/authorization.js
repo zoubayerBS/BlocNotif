@@ -21,6 +21,7 @@ const VALID_ROLES = [
   'medecin anesthesiste',
   'surveillant bloc',
   'instrumentiste',
+  'panseur',
   'superuser',
 ];
 

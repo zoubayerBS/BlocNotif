@@ -256,6 +256,7 @@
       if (audience === 'techniciens' && userRole !== 'technicien') return false;
       if (audience === 'medecins' && userRole !== 'medecin anesthesiste') return false;
       if (audience === 'instrumentistes' && userRole !== 'instrumentiste') return false;
+      if (audience === 'panseurs' && userRole !== 'panseur') return false;
       if (audience === 'tech_marc' && userRole !== 'technicien' && userRole !== 'medecin anesthesiste') return false;
     }
 
